@@ -1,0 +1,2183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover,user-scalable=no,maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#F8FAFF">
+<title>星知 - AI学习助手</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ========== RESET & VARIABLES ========== */
+:root{
+  --primary:#3B82F6;--secondary:#8B5CF6;
+  --gradient:linear-gradient(135deg,#3B82F6,#8B5CF6);
+  --bg:#F8FAFF;--card:#FFFFFF;
+  --text1:#0F172A;--text2:#475569;--text3:#94A3B8;
+  --border:#E2E8F0;
+  --red:#EF4444;--red-bg:#FEF2F2;
+  --orange:#F59E0B;--orange-bg:#FFFBEB;
+  --green:#10B981;--green-bg:#F0FDF4;
+  --r-lg:20px;--r-md:14px;--r-sm:10px;--r-full:50%;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.04);
+  --shadow:0 2px 8px rgba(0,0,0,.06);
+  --shadow-md:0 4px 16px rgba(0,0,0,.08);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.12);
+  --safe-t:0px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --nav-h:56px;
+  --bottom-h:calc(var(--nav-h) + var(--safe-b) + 4px);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;background:#000;font-family:'Noto Sans SC',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;-webkit-tap-highlight-color:transparent;user-select:none;}
+
+#app-shell{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0f0f1a;}
+#app{width:100%;height:100%;max-width:430px;position:relative;overflow:hidden;background:var(--bg);}
+@media(min-width:431px){#app{border-radius:44px;height:min(100vh - 40px,932px);box-shadow:0 0 0 8px #0f0f1a,0 0 80px rgba(59,130,246,.15);}}
+@media(max-width:430px){#app-shell{background:var(--bg);}}
+
+/* ========== STATUS BAR ========== */
+.status-bar{height:44px;display:flex;align-items:center;justify-content:space-between;padding-left:24px;padding-right:24px;font-size:14px;font-weight:600;color:var(--text1);position:absolute;top:0;left:0;right:0;z-index:100;flex-shrink:0;}
+.status-bar .time{width:54px;}
+.status-bar .notch{position:absolute;left:50%;transform:translateX(-50%);top:0;width:126px;height:34px;background:#000;border-radius:20px;display:none;}
+@media(max-width:430px){.status-bar .notch{display:block;}}
+.status-bar .icons{width:54px;display:flex;align-items:center;justify-content:flex-end;gap:6px;}
+.status-bar .icons span{font-size:16px;}
+
+/* ========== SCREENS ========== */
+.screen{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;overflow:hidden;z-index:1;padding-top:44px;}
+.screen.active{display:flex;z-index:2;}
+.screen.slide-in{animation:slideIn .35s cubic-bezier(.32,.72,0,1) forwards;}
+@keyframes slideIn{from{transform:translateX(100%);}to{transform:translateX(0);}}
+.screen-body{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--bottom-h) + 8px);}
+.screen-body::-webkit-scrollbar{display:none;}
+.screen-body.no-nav{padding-bottom:16px;}
+
+/* ========== HOME BACKGROUND ========== */
+#screen-home .screen-body{background:radial-gradient(circle at 20% 0%,rgba(139,92,246,.12),transparent 45%),radial-gradient(circle at 85% 0%,rgba(59,130,246,.12),transparent 45%),radial-gradient(circle at 50% 100%,rgba(99,102,241,.06),transparent 50%),var(--bg);}
+.home-streak-card{margin:0 20px 16px;background:linear-gradient(135deg,#6366F1,#7C3AED);border-radius:var(--r-lg);padding:20px;box-shadow:0 4px 20px rgba(99,102,241,.35);cursor:pointer;position:relative;overflow:hidden;}
+.home-streak-card::before{content:'';position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(255,255,255,.1);border-radius:50%;}
+
+/* ========== ROCKET ========== */
+.rocket-wrapper{width:40px;height:40px;flex-shrink:0;cursor:pointer;transform:rotate(-35deg);position:relative;z-index:2;}
+.rocket-body{font-size:40px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.15));position:relative;z-index:2;transition:filter .3s;}
+.rocket-flame{position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);width:14px;height:0;background:linear-gradient(to bottom,#FBBF24,#F97316,#EF4444);border-radius:0 0 50% 50%;opacity:0;z-index:1;transition:height .2s,opacity .2s;}
+
+/* launch */
+.rocket-wrapper.launching{animation:rocketLaunch .7s cubic-bezier(.25,.46,.45,.94) forwards;}
+.rocket-wrapper.launching .rocket-flame{opacity:1;animation:flameGrow .15s .05s ease forwards;}
+.rocket-wrapper.launching .rocket-body{animation:rocketFade .7s .35s ease-out forwards;}
+
+/* return */
+.rocket-wrapper.returning{animation:rocketReturn .65s cubic-bezier(.34,1.56,.64,1) forwards;}
+.rocket-wrapper.returning .rocket-flame{opacity:1;animation:flameShrink .65s ease forwards;}
+.rocket-wrapper.returning .rocket-body{animation:rocketAppear .3s ease forwards;}
+
+@keyframes rocketLaunch{
+  0%{transform:rotate(-35deg) translate(0,0);opacity:1;}
+  60%{transform:rotate(-35deg) translate(50px,-80px);opacity:1;}
+  100%{transform:rotate(-35deg) translate(70px,-100px);opacity:0;}
+}
+@keyframes rocketFade{
+  0%{opacity:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.15));}
+  100%{opacity:0;filter:drop-shadow(0 2px 12px rgba(251,191,36,.6));}
+}
+@keyframes flameGrow{
+  0%{height:0;opacity:0;}
+  100%{height:28px;opacity:1;}
+}
+@keyframes rocketReturn{
+  0%{transform:rotate(-35deg) translate(0,120px);opacity:0;}
+  15%{opacity:1;}
+  100%{transform:rotate(-35deg) translate(0,0);opacity:1;}
+}
+@keyframes rocketAppear{
+  0%{opacity:0;}
+  100%{opacity:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.15));}
+}
+@keyframes flameShrink{
+  0%{height:20px;opacity:1;}
+  80%{height:6px;opacity:.6;}
+  100%{height:0;opacity:0;}
+}
+
+/* ========== BOTTOM NAV ========== */
+.bottom-nav{position:absolute;bottom:0;left:0;right:0;height:var(--bottom-h);background:rgba(255,255,255,.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;align-items:flex-start;justify-content:space-around;padding-top:6px;border-top:0.5px solid rgba(0,0,0,.06);z-index:50;}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;cursor:pointer;}
+.nav-item .material-symbols-outlined{font-size:26px;color:var(--text3);transition:color .2s;}
+.nav-item span:last-child{font-size:10px;color:var(--text3);font-weight:500;transition:color .2s;}
+.nav-item.active .material-symbols-outlined{color:var(--primary);}
+.nav-item.active span:last-child{color:var(--primary);font-weight:600;}
+.nav-ai{position:relative;margin-top:-22px;margin-bottom:-6px;}
+.nav-ai-btn{width:56px;height:56px;border-radius:var(--r-full);background:var(--gradient);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(59,130,246,.35);cursor:pointer;transition:transform .2s;}
+.nav-ai-btn:active{transform:scale(.92);}
+.nav-ai-btn .material-symbols-outlined{font-size:28px;color:#fff;}
+.nav-ai-btn::after{content:'';position:absolute;inset:-4px;border-radius:var(--r-full);background:var(--gradient);opacity:.2;animation:aiPulse 2.5s infinite;}
+@keyframes aiPulse{0%,100%{transform:scale(1);opacity:.2;}50%{transform:scale(1.12);opacity:.08;}}
+.nav-ai-label{font-size:10px;color:var(--text3);margin-top:4px;text-align:center;font-weight:500;}
+
+/* ========== LOGIN ========== */
+.login-screen{justify-content:center;align-items:center;}
+.login-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
+.login-bg .orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.3;}
+.login-bg .orb-1{width:300px;height:300px;background:var(--primary);top:-80px;right:-60px;}
+.login-bg .orb-2{width:250px;height:250px;background:var(--secondary);bottom:-60px;left:-80px;}
+.login-content{position:relative;z-index:2;width:100%;padding:0 32px;display:flex;flex-direction:column;align-items:center;}
+.login-logo{width:80px;height:80px;border-radius:24px;background:var(--gradient);display:flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 8px 32px rgba(59,130,246,.25);}
+.login-logo .material-symbols-outlined{font-size:40px;color:#fff;}
+.login-title{font-size:28px;font-weight:700;color:var(--text1);margin-bottom:4px;}
+.login-subtitle{font-size:14px;color:var(--text3);margin-bottom:40px;}
+.login-form{width:100%;max-width:320px;}
+.form-group{margin-bottom:16px;}
+.form-input{width:100%;height:52px;border:1.5px solid var(--border);border-radius:var(--r-md);padding:0 16px;font-size:15px;background:var(--card);color:var(--text1);outline:none;transition:border-color .2s;font-family:inherit;}
+.form-input:focus{border-color:var(--primary);}
+.form-input::placeholder{color:var(--text3);}
+.btn-primary{width:100%;height:52px;border:none;border-radius:var(--r-md);background:var(--gradient);color:#fff;font-size:16px;font-weight:600;cursor:pointer;transition:opacity .2s;font-family:inherit;}
+.btn-primary:active{opacity:.85;}
+.login-links{display:flex;justify-content:space-between;margin-top:16px;}
+.login-links a{font-size:13px;color:var(--primary);text-decoration:none;cursor:pointer;}
+.login-divider{display:flex;align-items:center;gap:12px;margin:24px 0;width:100%;max-width:320px;}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:0.5px;background:var(--border);}
+.login-divider span{font-size:12px;color:var(--text3);}
+.login-social{display:flex;gap:16px;justify-content:center;}
+.login-social-btn{width:48px;height:48px;border-radius:var(--r-full);border:1.5px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+
+/* ========== COMMON ========== */
+.page-header{display:flex;align-items:center;justify-content:space-between;padding:4px 20px 12px;position:relative;}
+.page-header h1{font-size:22px;font-weight:700;color:var(--text1);}
+.page-back{display:flex;align-items:center;gap:2px;cursor:pointer;color:var(--primary);font-size:15px;font-weight:500;padding:8px 0 8px 0;}
+.page-back .material-symbols-outlined{font-size:22px;}
+.card{background:var(--card);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow-sm);border:0.5px solid rgba(0,0,0,.04);}
+.badge{display:inline-flex;align-items:center;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500;}
+.badge-red{background:var(--red-bg);color:var(--red);}
+.badge-orange{background:var(--orange-bg);color:var(--orange);}
+.badge-green{background:var(--green-bg);color:var(--green);}
+.badge-blue{background:#EFF6FF;color:var(--primary);}
+.badge-purple{background:#F5F3FF;color:var(--secondary);}
+.btn{height:40px;border:none;border-radius:var(--r-sm);padding:0 20px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:opacity .2s;font-family:inherit;}
+.btn:active{opacity:.8;}
+.btn-gradient{background:var(--gradient);color:#fff;box-shadow:0 2px 8px rgba(59,130,246,.2);}
+.btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text2);}
+.btn-sm{height:32px;padding:0 14px;font-size:12px;border-radius:8px;}
+.btn-full{width:100%;height:48px;font-size:15px;}
+
+/* ========== HOME ========== */
+.home-top{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 0;margin-bottom:20px;}
+.home-avatar{width:44px;height:44px;border-radius:var(--r-full);background:var(--gradient);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;font-weight:700;color:#fff;flex-shrink:0;}
+.home-greeting{flex:1;margin-left:12px;min-width:0;}
+.home-greeting-hi{font-size:13px;color:var(--text3);font-weight:400;line-height:1.3;}
+.home-greeting-name{font-size:20px;font-weight:700;color:var(--text1);line-height:1.3;}
+.home-notify{position:relative;cursor:pointer;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-full);background:var(--card);box-shadow:var(--shadow-sm);}
+.home-notify .material-symbols-outlined{font-size:20px;color:var(--text2);}
+.notify-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;background:var(--red);border-radius:50%;border:2px solid var(--card);}
+.home-task-card{margin:0 20px 16px;background:linear-gradient(135deg,#3B82F6,#8B5CF6);border-radius:24px;padding:28px;box-shadow:0 8px 32px rgba(59,130,246,.25);position:relative;overflow:hidden;color:#fff;}
+.home-task-card::before{content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;background:rgba(255,255,255,.08);border-radius:50%;}
+.home-task-card .label{font-size:15px;color:rgba(255,255,255,.75);font-weight:600;margin-bottom:20px;letter-spacing:.5px;}
+.home-task-row-item{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+.home-task-row-item:last-of-type{margin-bottom:0;}
+.home-task-row-item .material-symbols-outlined{font-size:28px;color:rgba(255,255,255,.85);}
+.home-task-row-label{font-size:15px;color:rgba(255,255,255,.9);width:64px;flex-shrink:0;font-weight:500;white-space:nowrap;}
+.home-task-row-bar{flex:1;height:12px;background:rgba(255,255,255,.18);border-radius:6px;overflow:hidden;}
+.home-task-row-fill{height:100%;background:rgba(255,255,255,.8);border-radius:6px;transition:width .8s ease;}
+.home-task-row-val{font-size:15px;font-weight:700;color:#fff;width:58px;text-align:right;flex-shrink:0;}
+
+/* ========== HOME SUBJECT CHART ========== */
+.home-subject-card{margin:0 20px 16px;background:var(--card);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow-sm);border:0.5px solid rgba(0,0,0,.04);}
+.home-subject-title{font-size:15px;font-weight:600;color:var(--text1);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.home-subject-title .material-symbols-outlined{font-size:18px;color:var(--secondary);}
+.home-subject-row{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.home-subject-row:last-child{margin-bottom:0;}
+.home-subject-label{font-size:13px;color:var(--text2);width:52px;flex-shrink:0;}
+.home-subject-bar-wrap{flex:1;height:24px;background:#F1F5F9;border-radius:12px;overflow:hidden;}
+.home-subject-bar-fill{height:100%;border-radius:12px;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;font-size:11px;font-weight:600;color:#fff;transition:width .8s ease;}
+.home-subject-val{font-size:13px;font-weight:600;color:var(--text1);width:48px;text-align:right;flex-shrink:0;}
+.home-review-card{margin:0 20px 16px;background:rgba(255,255,255,.75);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow-sm);border:0.5px solid rgba(255,255,255,.5);}
+.home-review-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.home-review-title{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--text1);}
+.home-review-title .material-symbols-outlined{color:var(--secondary);font-size:20px;}
+.home-review-stats{display:flex;gap:16px;}
+.home-review-stat{font-size:13px;color:var(--text2);}
+.home-review-stat strong{color:var(--text1);font-weight:600;}
+.home-review-arrow{color:var(--text3);font-size:18px;}
+.home-suggest-card{margin:0 20px 16px;background:var(--card);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow-sm);border:0.5px solid rgba(0,0,0,.04);cursor:pointer;transition:transform .2s;}
+.home-suggest-card:active{transform:scale(.98);}
+.suggest-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.suggest-avatar{width:28px;height:28px;border-radius:var(--r-full);background:var(--gradient);display:flex;align-items:center;justify-content:center;}
+.suggest-avatar .material-symbols-outlined{font-size:14px;color:#fff;}
+.suggest-name{font-size:13px;font-weight:600;color:var(--text1);}
+.suggest-tag{font-size:11px;color:var(--text3);background:#F1F5F9;padding:2px 8px;border-radius:10px;}
+.suggest-content{font-size:14px;color:var(--text2);line-height:1.5;margin-bottom:12px;}
+.suggest-action{font-size:13px;color:var(--primary);font-weight:500;display:flex;align-items:center;gap:4px;}
+.suggest-action .material-symbols-outlined{font-size:16px;}
+
+/* ========== TASKS ========== */
+.task-header{display:flex;align-items:center;justify-content:space-between;padding:0 20px 16px;}
+.task-header h1{font-size:22px;font-weight:700;color:var(--text1);}
+.task-filter-btn{display:flex;align-items:center;gap:4px;padding:8px 14px;border-radius:var(--r-sm);background:var(--card);border:1px solid var(--border);cursor:pointer;font-size:13px;color:var(--text2);font-weight:500;}
+.task-filter-btn .material-symbols-outlined{font-size:18px;}
+.task-list{padding:0 20px;display:flex;flex-direction:column;gap:12px;}
+.task-card{background:var(--card);border-radius:var(--r-lg);padding:18px 20px;box-shadow:var(--shadow-sm);border:0.5px solid rgba(0,0,0,.04);display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;cursor:pointer;transition:transform .2s;}
+.task-card:active{transform:scale(.98);}
+.task-card-bar{position:absolute;left:0;top:0;bottom:0;width:4px;}
+.task-card-bar.red{background:var(--red);}
+.task-card-bar.orange{background:var(--orange);}
+.task-card-bar.green{background:var(--green);}
+
+/* ========== TASK WINDOWS ========== */
+.task-window{margin:0 20px 16px;background:var(--card);border-radius:var(--r-lg);box-shadow:var(--shadow-sm);border:0.5px solid rgba(0,0,0,.04);overflow:hidden;}
+.task-window-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;}
+.task-window-title{font-size:16px;font-weight:700;color:var(--text1);display:flex;align-items:center;gap:8px;}
+.task-window-title .material-symbols-outlined{font-size:20px;color:var(--primary);}
+.task-window-badge{font-size:12px;padding:3px 10px;border-radius:10px;font-weight:600;}
+.task-window-scroll{height:240px;min-height:240px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 20px 12px;display:flex;flex-direction:column;gap:10px;}
+.task-window-scroll .task-card{flex-shrink:0;min-height:70px;}
+.task-window-scroll::-webkit-scrollbar{display:none;}
+.task-earlier-header{padding:20px 20px 10px;font-size:15px;font-weight:600;color:var(--text3);display:flex;align-items:center;gap:8px;}
+.task-earlier-header .material-symbols-outlined{font-size:18px;}
+.task-earlier-list{padding:0 20px;display:flex;flex-direction:column;gap:12px;padding-bottom:20px;}
+.task-info{flex:1;padding-left:8px;}
+.task-name{font-size:15px;font-weight:600;color:var(--text1);margin-bottom:4px;}
+.task-meta{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3);}
+.task-action{flex-shrink:0;}
+.task-action .btn{min-width:72px;}
+
+/* ========== KNOWLEDGE BASE ========== */
+.kb-header{display:flex;gap:10px;padding:0 20px 16px;}
+.kb-search{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:var(--r-md);padding:0 14px;height:44px;border:1.5px solid var(--border);flex:1;}
+.kb-search .material-symbols-outlined{font-size:20px;color:var(--text3);}
+.kb-search input{flex:1;border:none;outline:none;font-size:14px;background:transparent;font-family:inherit;color:var(--text1);}
+.kb-search input::placeholder{color:var(--text3);}
+.kb-top{display:flex;align-items:center;justify-content:space-between;padding:0 20px 8px;}
+.kb-top h2{font-size:16px;font-weight:600;color:var(--text1);}
+.kb-filter-btn{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text2);cursor:pointer;padding:6px 10px;border-radius:8px;background:var(--card);border:1px solid var(--border);}
+.kb-filter-btn .material-symbols-outlined{font-size:16px;}
+.kb-list{padding:0 20px;display:flex;flex-direction:column;gap:12px;}
+.kb-card{background:var(--card);border-radius:var(--r-lg);padding:18px;box-shadow:var(--shadow-sm);border:0.5px solid rgba(0,0,0,.04);cursor:pointer;transition:transform .2s;}
+.kb-card:active{transform:scale(.98);}
+.kb-card-title{font-size:15px;font-weight:600;color:var(--text1);margin-bottom:6px;}
+.kb-card-desc{font-size:13px;color:var(--text2);line-height:1.4;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.kb-card-tags{display:flex;gap:6px;flex-wrap:wrap;}
+
+/* ========== MY PAGE ========== */
+.my-header{display:flex;flex-direction:column;align-items:center;padding:20px 20px 24px;background:var(--card);margin:0 20px 16px;border-radius:var(--r-lg);box-shadow:var(--shadow-sm);}
+.my-avatar{width:72px;height:72px;border-radius:var(--r-full);background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#fff;margin-bottom:10px;cursor:pointer;position:relative;}
+.my-avatar-edit{position:absolute;bottom:0;right:0;width:24px;height:24px;border-radius:50%;background:var(--card);border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;}
+.my-avatar-edit .material-symbols-outlined{font-size:14px;color:var(--text2);}
+.my-name{font-size:18px;font-weight:700;color:var(--text1);margin-bottom:2px;cursor:pointer;}
+.my-id{font-size:13px;color:var(--text3);}
+.my-stats{display:flex;gap:0;margin:16px 20px 16px;background:var(--card);border-radius:var(--r-lg);box-shadow:var(--shadow-sm);overflow:hidden;}
+.my-stat{flex:1;text-align:center;padding:18px 8px;position:relative;}
+.my-stat:not(:last-child)::after{content:'';position:absolute;right:0;top:16px;bottom:16px;width:0.5px;background:var(--border);}
+.my-stat-num{font-size:22px;font-weight:700;color:var(--primary);}
+.my-stat-label{font-size:12px;color:var(--text3);margin-top:4px;}
+.my-menu{margin:0 20px;background:var(--card);border-radius:var(--r-lg);box-shadow:var(--shadow-sm);overflow:hidden;}
+.my-menu-item{display:flex;align-items:center;padding:16px 20px;cursor:pointer;transition:background .15s;}
+.my-menu-item:active{background:#F8FAFC;}
+.my-menu-item:not(:last-child){border-bottom:0.5px solid var(--border);}
+.my-menu-item .material-symbols-outlined{font-size:22px;color:var(--text3);margin-right:14px;}
+.my-menu-item span{flex:1;font-size:15px;color:var(--text1);}
+.my-menu-item .arrow{color:var(--text3);font-size:18px;}
+.my-logout{margin:20px;text-align:center;}
+.my-logout .btn{width:100%;max-width:380px;background:var(--red-bg);color:var(--red);}
+
+/* ========== AI CHAT ========== */
+.chat-overlay{position:absolute;inset:0;z-index:60;background:var(--bg);transform:translateY(100%);transition:transform .4s cubic-bezier(.32,.72,0,1);display:flex;flex-direction:column;padding-top:44px;visibility:hidden;pointer-events:none;}
+.chat-overlay.open{transform:translateY(0);visibility:visible;pointer-events:auto;}
+.chat-header{display:flex;align-items:center;padding:0 16px 12px;flex-shrink:0;}
+.chat-close{width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:var(--r-full);color:var(--primary);}
+.chat-close:active{background:#EFF6FF;}
+.chat-close .material-symbols-outlined{font-size:22px;}
+.chat-header-avatars{flex:1;display:flex;align-items:center;justify-content:center;gap:12px;}
+.chat-header-avatars .av{width:32px;height:32px;border-radius:var(--r-full);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;}
+.chat-header-avatars .av.ai{background:var(--gradient);color:#fff;}
+.chat-header-avatars .av.me{background:#E2E8F0;color:var(--text2);}
+.chat-header-conn{width:20px;height:2px;background:var(--border);border-radius:1px;}
+.chat-body{flex:1;overflow-y:auto;padding:0 16px 16px;-webkit-overflow-scrolling:touch;}
+.chat-body::-webkit-scrollbar{display:none;}
+.chat-msg{display:flex;gap:8px;margin-bottom:16px;animation:msgIn .3s ease;}
+@keyframes msgIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.chat-msg.ai{flex-direction:row;}
+.chat-msg.user{flex-direction:row-reverse;}
+.chat-avatar{width:32px;height:32px;border-radius:var(--r-full);flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.chat-avatar.ai-av{background:var(--gradient);}
+.chat-avatar.ai-av .material-symbols-outlined{font-size:16px;color:#fff;}
+.chat-avatar.user-av{background:#E2E8F0;color:var(--text2);font-size:12px;font-weight:600;}
+.chat-bubble{max-width:75%;padding:12px 16px;border-radius:18px;font-size:14px;line-height:1.6;word-break:break-word;}
+.chat-msg.ai .chat-bubble{background:var(--card);color:var(--text1);border-bottom-left-radius:4px;box-shadow:var(--shadow-sm);}
+.chat-msg.user .chat-bubble{background:var(--gradient);color:#fff;border-bottom-right-radius:4px;}
+.chat-typing{display:flex;gap:4px;padding:8px 0;}
+.chat-typing span{width:6px;height:6px;border-radius:50%;background:var(--text3);animation:bounce .6s infinite alternate;}
+.chat-typing span:nth-child(2){animation-delay:.2s;}
+.chat-typing span:nth-child(3){animation-delay:.4s;}
+@keyframes bounce{from{opacity:.3;transform:translateY(0);}to{opacity:1;transform:translateY(-4px);}}
+.chat-input-bar{flex-shrink:0;background:var(--card);border-top:0.5px solid var(--border);padding:10px 12px calc(10px + var(--safe-b));position:relative;}
+.chat-input-row{display:flex;align-items:flex-end;gap:8px;}
+.chat-add-btn{width:36px;height:36px;border-radius:var(--r-full);border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.chat-add-btn:active{background:#F1F5F9;}
+.chat-add-btn .material-symbols-outlined{font-size:24px;color:var(--text2);}
+.chat-add-menu{position:absolute;bottom:70px;left:12px;background:var(--card);border-radius:var(--r-md);box-shadow:var(--shadow-lg);padding:6px;display:none;z-index:10;}
+.chat-add-menu.show{display:block;animation:menuIn .2s ease;}
+@keyframes menuIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.chat-add-item{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;cursor:pointer;font-size:14px;color:var(--text1);width:160px;transition:background .15s;}
+.chat-add-item:active{background:#F1F5F9;}
+.chat-add-item .material-symbols-outlined{font-size:22px;color:var(--primary);}
+.chat-text-wrap{flex:1;background:#F1F5F9;border-radius:22px;display:flex;align-items:flex-end;min-height:36px;max-height:120px;}
+.chat-text-input{flex:1;border:none;outline:none;background:transparent;padding:8px 16px;font-size:14px;line-height:1.5;resize:none;max-height:100px;font-family:inherit;color:var(--text1);}
+.chat-text-input::placeholder{color:var(--text3);}
+.chat-mic-btn{width:36px;height:36px;border-radius:var(--r-full);border:none;background:var(--gradient);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .15s;}
+.chat-mic-btn:active{transform:scale(.9);}
+.chat-mic-btn.recording{background:var(--red);animation:micPulse 1s infinite;}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.3);}50%{box-shadow:0 0 0 8px rgba(239,68,68,0);}}
+.chat-mic-btn .material-symbols-outlined{font-size:20px;color:#fff;}
+.chat-mic-hint{text-align:center;font-size:12px;color:var(--red);padding:4px;display:none;}
+.chat-mic-hint.show{display:block;}
+
+/* ========== REVIEW DETAIL ========== */
+.review-header-card{margin:0 20px 16px;background:var(--gradient);border-radius:var(--r-lg);padding:24px;color:#fff;}
+.review-date{font-size:13px;opacity:.8;margin-bottom:4px;}
+.review-title{font-size:20px;font-weight:700;margin-bottom:16px;}
+.review-main-stats{display:flex;gap:20px;}
+.review-stat-item{text-align:center;}
+.review-stat-item .val{font-size:22px;font-weight:700;}
+.review-stat-item .lbl{font-size:11px;opacity:.7;margin-top:2px;}
+.review-section{margin:0 20px 16px;}
+.review-section-title{font-size:16px;font-weight:600;color:var(--text1);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.review-chart{display:flex;align-items:flex-end;gap:8px;height:120px;padding:16px;background:var(--card);border-radius:var(--r-md);box-shadow:var(--shadow-sm);}
+.review-bar{flex:1;border-radius:6px 6px 0 0;background:var(--gradient);opacity:.7;position:relative;transition:height .6s ease;}
+.review-bar.today{opacity:1;}
+.review-bar-label{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--text3);white-space:nowrap;}
+.review-bar-val{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--text2);font-weight:600;white-space:nowrap;}
+.review-highlights{background:var(--card);border-radius:var(--r-md);padding:16px;box-shadow:var(--shadow-sm);}
+.review-highlight-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;}
+.review-highlight-item:not(:last-child){border-bottom:0.5px solid var(--border);}
+.review-highlight-icon{width:24px;height:24px;border-radius:var(--r-full);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+.review-highlight-icon.good{background:var(--green-bg);color:var(--green);}
+.review-highlight-icon.bad{background:var(--red-bg);color:var(--red);}
+.review-highlight-icon .material-symbols-outlined{font-size:16px;}
+.review-highlight-text{font-size:14px;color:var(--text2);line-height:1.5;}
+.review-highlight-text strong{color:var(--text1);}
+.review-ai-card{background:linear-gradient(135deg,#EFF6FF,#F5F3FF);border-radius:var(--r-md);padding:16px;margin-bottom:20px;}
+.review-ai-card .ai-name{font-size:13px;font-weight:600;color:var(--secondary);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.review-ai-card .ai-name .material-symbols-outlined{font-size:16px;}
+.review-ai-card p{font-size:13px;color:var(--text2);line-height:1.6;}
+
+/* ========== TASK LEARN ========== */
+.learn-tabs{display:flex;padding:0 20px;gap:0;background:var(--card);border-radius:var(--r-md);margin:0 20px 16px;overflow:hidden;box-shadow:var(--shadow-sm);}
+.learn-tab{flex:1;text-align:center;padding:12px;font-size:14px;font-weight:500;color:var(--text3);cursor:pointer;transition:all .2s;position:relative;}
+.learn-tab.active{color:var(--primary);font-weight:600;}
+.learn-tab.active::after{content:'';position:absolute;bottom:0;left:20%;right:20%;height:2px;background:var(--gradient);border-radius:1px;}
+.learn-content{padding:0 20px;}
+.learn-section{background:var(--card);border-radius:var(--r-md);padding:16px;margin-bottom:12px;box-shadow:var(--shadow-sm);}
+.learn-section-title{font-size:15px;font-weight:600;color:var(--text1);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.learn-section-title .material-symbols-outlined{font-size:18px;color:var(--primary);}
+.learn-complete-bar{position:absolute;bottom:var(--bottom-h);left:0;right:0;padding:12px 20px calc(12px + var(--safe-b));background:rgba(255,255,255,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:0.5px solid rgba(0,0,0,.06);z-index:5;}
+.learn-progress-mini{margin-bottom:10px;}
+.learn-progress-mini .bar{height:4px;background:#E2E8F0;border-radius:2px;overflow:hidden;}
+.learn-progress-mini .fill{height:100%;background:var(--gradient);border-radius:2px;transition:width .4s;}
+.learn-progress-mini .labels{display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:var(--text3);}
+
+/* ========== QUIZ ========== */
+.quiz-progress{padding:0 20px;margin-bottom:16px;}
+.quiz-progress-text{font-size:13px;color:var(--text3);margin-bottom:6px;}
+.quiz-progress-bar{height:4px;background:#E2E8F0;border-radius:2px;overflow:hidden;}
+.quiz-progress-bar .fill{height:100%;background:var(--gradient);border-radius:2px;transition:width .4s;}
+.quiz-question{margin:0 20px;background:var(--card);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow-sm);margin-bottom:16px;}
+.quiz-q-text{font-size:16px;font-weight:600;color:var(--text1);line-height:1.5;margin-bottom:16px;}
+.quiz-option{display:flex;align-items:center;padding:14px 16px;border:1.5px solid var(--border);border-radius:var(--r-md);margin-bottom:10px;cursor:pointer;transition:all .2s;font-size:14px;color:var(--text2);}
+.quiz-option:active{background:#F8FAFC;}
+.quiz-option.selected{border-color:var(--primary);background:#EFF6FF;color:var(--primary);}
+.quiz-option.correct{border-color:var(--green);background:var(--green-bg);color:var(--green);}
+.quiz-option.wrong{border-color:var(--red);background:var(--red-bg);color:var(--red);}
+.quiz-option .opt-label{width:24px;height:24px;border-radius:var(--r-full);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;margin-right:12px;flex-shrink:0;transition:all .2s;}
+.quiz-option.selected .opt-label{border-color:var(--primary);background:var(--primary);color:#fff;}
+.quiz-option.correct .opt-label{border-color:var(--green);background:var(--green);color:#fff;}
+.quiz-option.wrong .opt-label{border-color:var(--red);background:var(--red);color:#fff;}
+.quiz-submit{padding:0 20px;}
+
+/* ========== MODALS ========== */
+.modal-overlay{position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:70;display:none;align-items:flex-end;justify-content:center;}
+.modal-overlay.show{display:flex;}
+.modal-sheet{width:100%;max-height:85%;background:var(--card);border-radius:24px 24px 0 0;padding:20px 20px calc(20px + var(--safe-b));overflow-y:auto;animation:slideUp .35s cubic-bezier(.32,.72,0,1);}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.modal-handle{width:36px;height:4px;background:#D1D5DB;border-radius:2px;margin:0 auto 16px;}
+.modal-title{font-size:18px;font-weight:700;color:var(--text1);text-align:center;margin-bottom:20px;}
+.review-result-stats{display:flex;gap:12px;margin-bottom:20px;}
+.review-result-stat{flex:1;text-align:center;padding:16px;background:var(--bg);border-radius:var(--r-md);}
+.review-result-stat .val{font-size:20px;font-weight:700;}
+.review-result-stat .lbl{font-size:11px;color:var(--text3);margin-top:4px;}
+.review-result-section{margin-bottom:16px;}
+.review-result-section h3{font-size:14px;font-weight:600;color:var(--text1);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.review-result-section h3 .material-symbols-outlined{font-size:18px;}
+.review-result-section p{font-size:13px;color:var(--text2);line-height:1.6;padding:12px;background:var(--bg);border-radius:var(--r-sm);}
+.modal-actions{display:flex;gap:10px;}
+.modal-actions .btn{flex:1;}
+
+/* ========== NOTIFICATIONS ========== */
+.notif-list{padding:0 20px;}
+.notif-item{display:flex;gap:12px;padding:16px 0;border-bottom:0.5px solid var(--border);cursor:pointer;}
+.notif-icon{width:40px;height:40px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.notif-icon.task{background:#EFF6FF;color:var(--primary);}
+.notif-icon.review{background:#F5F3FF;color:var(--secondary);}
+.notif-icon.ai{background:#FEF3C7;color:var(--orange);}
+.notif-icon .material-symbols-outlined{font-size:20px;}
+.notif-content{flex:1;}
+.notif-content h4{font-size:14px;font-weight:600;color:var(--text1);margin-bottom:2px;}
+.notif-content p{font-size:13px;color:var(--text3);}
+.notif-time{font-size:12px;color:var(--text3);flex-shrink:0;margin-top:2px;}
+
+/* ========== SETTINGS ========== */
+.settings-list{margin:0 20px;background:var(--card);border-radius:var(--r-lg);box-shadow:var(--shadow-sm);overflow:hidden;}
+.settings-item{display:flex;align-items:center;padding:16px 20px;cursor:pointer;}
+.settings-item:not(:last-child){border-bottom:0.5px solid var(--border);}
+.settings-item:active{background:#F8FAFC;}
+.settings-item .material-symbols-outlined{font-size:22px;color:var(--text3);margin-right:14px;}
+.settings-item span{flex:1;font-size:15px;color:var(--text1);}
+.settings-item .arrow{color:var(--text3);font-size:18px;}
+.settings-item .val{color:var(--text3);font-size:14px;margin-right:8px;}
+
+/* ========== FILTER PANEL ========== */
+.filter-panel{position:absolute;bottom:0;left:0;right:0;z-index:80;background:var(--card);border-radius:24px 24px 0 0;padding:20px 20px calc(20px + var(--safe-b));display:none;animation:slideUp .35s cubic-bezier(.32,.72,0,1);}
+.filter-panel.show{display:block;}
+.filter-group{margin-bottom:20px;}
+.filter-group-title{font-size:14px;font-weight:600;color:var(--text1);margin-bottom:10px;}
+.filter-chips{display:flex;flex-wrap:wrap;gap:8px;}
+.filter-chip{padding:8px 16px;border-radius:20px;font-size:13px;color:var(--text2);background:var(--bg);border:1.5px solid var(--border);cursor:pointer;transition:all .2s;}
+.filter-chip.active{background:#EFF6FF;border-color:var(--primary);color:var(--primary);font-weight:500;}
+.filter-actions{display:flex;gap:10px;}
+.filter-actions .btn{flex:1;height:44px;}
+
+/* ========== KNOWLEDGE DETAIL ========== */
+.kd-content{padding:20px;}
+.kd-article{font-size:14px;color:var(--text2);line-height:1.8;margin-bottom:20px;}
+.kd-ai-summary{background:linear-gradient(135deg,#EFF6FF,#F5F3FF);border-radius:var(--r-md);padding:16px;margin-bottom:20px;}
+.kd-ai-summary h3{font-size:14px;font-weight:600;color:var(--secondary);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.kd-ai-summary h3 .material-symbols-outlined{font-size:16px;}
+.kd-ai-summary p{font-size:13px;color:var(--text2);line-height:1.6;}
+.kd-actions{display:flex;gap:10px;margin-top:16px;}
+
+/* ========== STATS ========== */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 20px;margin-bottom:16px;}
+.stats-card{background:var(--card);border-radius:var(--r-md);padding:16px;box-shadow:var(--shadow-sm);text-align:center;}
+.stats-card .num{font-size:24px;font-weight:700;color:var(--primary);}
+.stats-card .lbl{font-size:12px;color:var(--text3);margin-top:4px;}
+.stats-chart-section{margin:0 20px 16px;background:var(--card);border-radius:var(--r-md);padding:16px;box-shadow:var(--shadow-sm);}
+.stats-chart-section h3{font-size:14px;font-weight:600;color:var(--text1);margin-bottom:12px;}
+.stats-bars{display:flex;align-items:flex-end;gap:6px;height:100px;}
+.stats-bar{flex:1;background:var(--gradient);border-radius:4px 4px 0 0;opacity:.6;position:relative;transition:height .6s ease;}
+.stats-bar:last-child{opacity:1;}
+.stats-bar-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--text3);white-space:nowrap;}
+
+/* ========== GEN QUIZ ========== */
+.gen-quiz-options{padding:0 20px;}
+.gen-quiz-card{background:var(--card);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow-sm);margin-bottom:12px;}
+.gen-quiz-card h3{font-size:15px;font-weight:600;color:var(--text1);margin-bottom:12px;}
+
+/* ========== HELP ========== */
+.help-section{padding:20px;}
+.help-section h3{font-size:16px;font-weight:600;color:var(--text1);margin-bottom:12px;}
+.help-textarea{width:100%;min-height:120px;border:1.5px solid var(--border);border-radius:var(--r-md);padding:14px;font-size:14px;font-family:inherit;color:var(--text1);outline:none;resize:none;background:var(--card);}
+.help-textarea:focus{border-color:var(--primary);}
+
+/* ========== LEARNING STATUS CARD ========== */
+.ls-card{margin:16px 20px;background:var(--card);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow-sm);border:0.5px solid rgba(0,0,0,.04);}
+.ls-header{font-size:16px;font-weight:700;color:var(--text1);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.ls-header .material-symbols-outlined{font-size:20px;color:var(--secondary);}
+.ls-section{margin-bottom:16px;}
+.ls-section:last-child{margin-bottom:0;}
+.ls-section-title{font-size:13px;font-weight:600;color:var(--text3);margin-bottom:10px;letter-spacing:.5px;}
+.ls-subject-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.ls-subject-row:last-child{margin-bottom:0;}
+.ls-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.ls-name{font-size:13px;color:var(--text2);width:90px;flex-shrink:0;}
+.ls-bar-wrap{flex:1;height:8px;background:#F1F5F9;border-radius:4px;overflow:hidden;}
+.ls-bar-fill{height:100%;border-radius:4px;transition:width .8s ease;}
+.ls-val{font-size:13px;font-weight:600;color:var(--text1);width:36px;text-align:right;flex-shrink:0;}
+.ls-val-extra{font-size:10px;color:var(--text3);text-align:left;white-space:nowrap;margin-top:1px;line-height:1.2;}
+/* AI 判断高亮块 */
+.ai-judge{background:rgba(139,92,246,.06);border-left:3px solid var(--secondary);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:10px 14px;margin:10px 0;}
+.ai-judge-title{font-size:13px;font-weight:600;color:var(--secondary);margin-bottom:6px;display:flex;align-items:center;gap:4px;}
+.ai-judge-title .material-symbols-outlined{font-size:16px;}
+.ai-judge-line{font-size:13px;color:var(--text2);line-height:1.6;}
+.ai-judge-line strong{color:var(--text1);}
+.ai-judge-line .val-bad{color:var(--red);font-weight:600;}
+.ai-judge-line .val-good{color:var(--green);font-weight:600;}
+.ai-suggest-line{display:flex;align-items:baseline;gap:6px;margin-bottom:6px;font-size:13px;color:var(--text1);line-height:1.6;}
+.ai-suggest-line:last-child{margin-bottom:0;}
+.ai-suggest-reason{font-size:11px;color:var(--text3);margin-left:18px;}
+.ai-data-row{display:flex;justify-content:space-between;padding:3px 0;font-size:13px;color:var(--text2);}
+.ai-data-row strong{color:var(--text1);}
+.ai-data-row .val-bad{color:var(--red);font-weight:600;}
+.ai-data-row .val-good{color:var(--green);font-weight:600;}
+.ai-section-title{font-size:13px;font-weight:600;color:var(--text1);margin:12px 0 6px;display:flex;align-items:center;gap:4px;}
+.ls-time-tabs{display:flex;gap:4px;margin-bottom:12px;background:#F1F5F9;border-radius:10px;padding:3px;}
+.ls-time-tab{flex:1;text-align:center;padding:7px 0;font-size:12px;font-weight:500;color:var(--text3);border-radius:8px;cursor:pointer;transition:all .2s;}
+.ls-time-tab.active{background:var(--card);color:var(--primary);font-weight:600;box-shadow:var(--shadow-sm);}
+.ls-perf-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.ls-perf-item{text-align:center;padding:12px;background:var(--bg);border-radius:var(--r-sm);}
+.ls-perf-val{font-size:20px;font-weight:700;color:var(--primary);}
+.ls-perf-label{font-size:11px;color:var(--text3);margin-top:2px;}
+.ls-trend{display:flex;gap:16px;justify-content:center;}
+.ls-trend-item{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text2);}
+.ls-trend-label{color:var(--text3);}
+.ls-trend-up{color:var(--green);font-weight:600;}
+.ls-trend-down{color:var(--red);font-weight:600;}
+
+/* ========== SWAP BATCH ========== */
+.swap-batch{margin-top:12px;display:flex;justify-content:flex-end;}
+.swap-batch-btn{display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:16px;background:#F1F5F9;border:none;cursor:pointer;font-size:12px;color:var(--text2);font-weight:500;transition:all .2s;font-family:inherit;}
+.swap-batch-btn:active{background:#E2E8F0;}
+.swap-batch-btn .material-symbols-outlined{font-size:14px;}
+.swap-prefs{display:none;margin-top:10px;padding:10px;background:var(--bg);border-radius:var(--r-sm);animation:swapFadeIn .2s ease;}
+.swap-prefs.show{display:flex;flex-wrap:wrap;gap:8px;}
+.swap-pref-chip{padding:6px 14px;border-radius:16px;font-size:12px;font-weight:500;color:var(--text2);background:var(--card);border:1px solid var(--border);cursor:pointer;transition:all .2s;}
+.swap-pref-chip:active{border-color:var(--primary);color:var(--primary);}
+@keyframes swapFadeIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+/* ========== REGISTER ========== */
+.form-row{display:flex;gap:12px;}
+.form-row .form-group{flex:1;}
+</style>
+</head>
+<body>
+<div id="app-shell">
+<div id="app">
+
+<!-- ===== LOGIN ===== -->
+<div id="screen-login" class="screen login-screen active">
+  <div class="login-bg"><div class="orb orb-1"></div><div class="orb orb-2"></div></div>
+  <div class="status-bar"><span class="time">19:24</span><div class="notch"></div><div class="icons"><span class="material-symbols-outlined">signal_cellular_alt</span><span class="material-symbols-outlined">wifi</span><span class="material-symbols-outlined">battery_5_bar</span></div></div>
+  <div class="login-content">
+    <div class="login-logo"><span class="material-symbols-outlined">auto_awesome</span></div>
+    <div class="login-title">星知</div>
+    <div class="login-subtitle">AI 驱动的学习伙伴</div>
+    <div class="login-form">
+      <div class="form-group"><input class="form-input" id="login-phone" type="tel" placeholder="手机号" maxlength="11"></div>
+      <div class="form-group"><input class="form-input" id="login-pw" type="password" placeholder="密码"></div>
+      <button class="btn-primary" onclick="doLogin()">登录</button>
+      <div class="login-links"><a onclick="showScreen('screen-register')">注册账号</a><a onclick="showScreen('screen-forgot')">忘记密码？</a></div>
+      <div class="login-divider"><span>其他登录方式</span></div>
+      <div class="login-social">
+        <div class="login-social-btn" onclick="socialLogin('微信')" style="width:52px;height:52px;"><svg viewBox="0 0 24 24" width="28" height="28"><path fill="#07C160" d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 01.213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 00.167-.054l1.903-1.114a.864.864 0 01.717-.098 10.16 10.16 0 002.837.403c.276 0 .543-.027.811-.05a6.329 6.329 0 01-.247-1.753c0-3.694 3.381-6.69 7.555-6.69.262 0 .516.024.77.042C16.706 4.882 13.074 2.188 8.691 2.188zm-2.6 4.17a1.12 1.12 0 110 2.24 1.12 1.12 0 010-2.24zm5.198 0a1.12 1.12 0 110 2.24 1.12 1.12 0 010-2.24zM16.033 10.8c-3.649 0-6.608 2.587-6.608 5.778s2.96 5.778 6.608 5.778a8.1 8.1 0 002.272-.322.66.66 0 01.55.075l1.514.886a.26.26 0 00.132.043c.13 0 .234-.108.234-.241 0-.058-.023-.113-.038-.169l-.31-1.178a.473.473 0 01.169-.529C22.862 19.962 23.64 18.298 23.64 16.578c0-3.191-2.96-5.778-6.608-5.778zm-2.424 3.39a.92.92 0 110 1.84.92.92 0 010-1.84zm4.848 0a.92.92 0 110 1.84.92.92 0 010-1.84z"/></svg></div>
+        <div class="login-social-btn" onclick="socialLogin('抖音')" style="width:52px;height:52px;"><svg viewBox="0 0 24 24" width="28" height="28"><path fill="#111" d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== FORGOT PASSWORD ===== -->
+<div id="screen-forgot" class="screen">
+  <div class="status-bar"><span class="time">19:24</span><div class="notch"></div><div class="icons"><span class="material-symbols-outlined">signal_cellular_alt</span><span class="material-symbols-outlined">wifi</span><span class="material-symbols-outlined">battery_5_bar</span></div></div>
+  <div style="padding:20px;">
+    <div class="page-back" onclick="showScreen('screen-login')"><span class="material-symbols-outlined">arrow_back_ios</span>返回</div>
+    <div style="text-align:center;margin:24px 0 32px;">
+      <div style="font-size:24px;font-weight:700;">忘记密码</div>
+      <div style="font-size:13px;color:var(--text3);margin-top:4px;">通过手机验证码重置密码</div>
+    </div>
+    <div class="register-form" style="max-width:320px;margin:0 auto;">
+      <div class="form-group"><input class="form-input" id="forgot-phone" type="tel" placeholder="手机号" maxlength="11"></div>
+      <div class="form-row">
+        <div class="form-group"><input class="form-input" id="forgot-code" type="text" placeholder="验证码"></div>
+        <button class="btn btn-outline" style="white-space:nowrap;height:52px;border-radius:var(--r-md);" onclick="sendCode(this)">获取验证码</button>
+      </div>
+      <div class="form-group"><input class="form-input" id="forgot-pw" type="password" placeholder="新密码（至少6位）"></div>
+      <div class="form-group"><input class="form-input" id="forgot-pw2" type="password" placeholder="确认新密码"></div>
+      <button class="btn-primary" onclick="doResetPw()">重置密码</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== REGISTER ===== -->
+<div id="screen-register" class="screen">
+  <div class="status-bar"><span class="time">19:24</span><div class="notch"></div><div class="icons"><span class="material-symbols-outlined">signal_cellular_alt</span><span class="material-symbols-outlined">wifi</span><span class="material-symbols-outlined">battery_5_bar</span></div></div>
+  <div style="padding:20px;">
+    <div class="page-back" onclick="showScreen('screen-login')"><span class="material-symbols-outlined">arrow_back_ios</span>返回</div>
+    <div style="text-align:center;margin:24px 0 32px;"><div style="font-size:24px;font-weight:700;">创建账号</div><div style="font-size:13px;color:var(--text3);margin-top:4px;">开始你的 AI 学习之旅</div></div>
+    <div class="register-form" style="max-width:320px;margin:0 auto;">
+      <div class="form-group"><input class="form-input" type="tel" placeholder="手机号" maxlength="11"></div>
+      <div class="form-row"><div class="form-group"><input class="form-input" type="text" placeholder="验证码"></div><button class="btn btn-outline" style="white-space:nowrap;height:52px;border-radius:var(--r-md);" onclick="sendCode(this)">获取验证码</button></div>
+      <div class="form-group"><input class="form-input" type="password" placeholder="设置密码"></div>
+      <div class="form-group"><input class="form-input" type="password" placeholder="确认密码"></div>
+      <button class="btn-primary" onclick="doRegister()">注册并登录</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== HOME ===== -->
+<div id="screen-home" class="screen">
+  <div class="status-bar"><span class="time">19:24</span><div class="notch"></div><div class="icons"><span class="material-symbols-outlined">signal_cellular_alt</span><span class="material-symbols-outlined">wifi</span><span class="material-symbols-outlined">battery_5_bar</span></div></div>
+  <div class="screen-body">
+    <div class="home-top">
+      <div style="display:flex;align-items:center;flex:1;min-width:0;">
+        <div class="home-avatar" onclick="switchTab(3)">J</div>
+        <div class="home-greeting">
+          <div class="home-greeting-hi" id="greeting-hi">你好</div>
+          <div class="home-greeting-name">JMing</div>
+        </div>
+      </div>
+      <div class="home-notify" onclick="navTo('screen-notifications','screen-home');clearNotifyDot();">
+        <span class="material-symbols-outlined">notifications</span><div class="notify-dot" id="notify-dot"></div>
+      </div>
+    </div>
+    <div class="home-streak-card" id="streak-card" onclick="launchRocket();">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-size:12px;color:rgba(255,255,255,.75);margin-bottom:4px">连续学习</div>
+          <div style="font-size:36px;font-weight:800;line-height:1;color:#fff" id="streak-days">0<span style="font-size:16px;font-weight:500;margin-left:2px">天</span></div>
+          <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:6px" id="streak-pct">🔥 超过 100% 的用户</div>
+        </div>
+        <div class="rocket-wrapper" id="rocket-wrapper">
+          <div class="rocket-flame"></div>
+          <div class="rocket-body">🚀</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;height:6px;background:rgba(255,255,255,.2);border-radius:3px">
+        <div style="width:0%;height:100%;background:rgba(255,255,255,.8);border-radius:3px;transition:width .8s ease" id="streak-bar"></div>
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:6px" id="streak-remain">距下一个成就还需 7 天</div>
+    </div>
+    <div class="home-task-card">
+      <div class="label">今日任务</div>
+      <div class="home-task-row-item">
+        <span class="material-symbols-outlined" style="font-size:20px;" id="ht-task-icon">task_alt</span>
+        <span class="home-task-row-label">任务完成</span>
+        <div class="home-task-row-bar"><div class="home-task-row-fill" id="ht-complete-fill" style="width:0%;"></div></div>
+        <span class="home-task-row-val" id="ht-complete-val">0 / 3</span>
+      </div>
+      <div class="home-task-row-item">
+        <span class="material-symbols-outlined" style="font-size:20px;">schedule</span>
+        <span class="home-task-row-label">学习时间</span>
+        <div class="home-task-row-bar"><div class="home-task-row-fill" id="ht-time-fill" style="width:0%;"></div></div>
+        <span class="home-task-row-val" id="ht-time-val">0 / 75m</span>
+      </div>
+      <div class="home-task-row-item">
+        <span class="material-symbols-outlined" style="font-size:20px;">verified</span>
+        <span class="home-task-row-label">正确率</span>
+        <div class="home-task-row-bar"><div class="home-task-row-fill" id="ht-acc-fill" style="width:0%;"></div></div>
+        <span class="home-task-row-val" id="ht-acc-val">-- %</span>
+      </div>
+      <button class="btn btn-full" style="margin-top:20px;height:52px;font-size:16px;border-radius:16px;background:rgba(255,255,255,.2);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#fff;border:1px solid rgba(255,255,255,.3);box-shadow:none;cursor:pointer;font-family:inherit;font-weight:600;transition:background .2s;" onclick="navTo('screen-tasks','screen-home');setTab(1);">开始学习</button>
+    </div>
+    <div class="home-review-card" id="home-review-card">
+      <div id="home-review-content"></div>
+    </div>
+  </div>
+  <nav class="bottom-nav" data-tab="home"><div class="nav-item active" onclick="switchTab(0)"><span class="material-symbols-outlined">home</span><span>首页</span></div><div class="nav-item" onclick="switchTab(1)"><span class="material-symbols-outlined">task_alt</span><span>任务</span></div><div class="nav-ai"><div class="nav-ai-btn" onclick="openChat()"><span class="material-symbols-outlined">auto_awesome</span></div><div class="nav-ai-label">小星</div></div><div class="nav-item" onclick="switchTab(2)"><span class="material-symbols-outlined">menu_book</span><span>知识库</span></div><div class="nav-item" onclick="switchTab(3)"><span class="material-symbols-outlined">person</span><span>我的</span></div></nav>
+</div>
+
+<!-- ===== TASKS ===== -->
+<div id="screen-tasks" class="screen">
+  <div class="status-bar"><span class="time">19:24</span><div class="notch"></div><div class="icons"><span class="material-symbols-outlined">signal_cellular_alt</span><span class="material-symbols-outlined">wifi</span><span class="material-symbols-outlined">battery_5_bar</span></div></div>
+  <div class="screen-body">
+    <div class="task-header"><h1>任务</h1><div class="task-filter-btn" onclick="toggleFilter()"><span class="material-symbols-outlined">tune</span>筛选</div></div>
+    <div class="task-window">
+      <div class="task-window-header"><div class="task-window-title"><span class="material-symbols-outlined">today</span>今日任务</div><div class="task-window-badge" style="background:var(--primary-bg);color:var(--primary);" id="today-count">0/3</div></div>
+      <div class="task-window-scroll" id="today-task-list"></div>
+    </div>
+    <div class="task-window">
+      <div class="task-window-header"><div class="task-window-title"><span class="material-symbols-outlined">history</span>昨日任务</div><div class="task-window-badge" style="background:var(--green-bg);color:var(--green);" id="yesterday-count">3/3</div></div>
+      <div class="task-window-scroll" id="yesterday-task-list"></div>
+    </div>
+    <div class="task-earlier-header"><span class="material-symbols-outlined">schedule</span>更早</div>
+    <div class="task-earlier-list" id="earlier-task-list"></div>
+  </div>
+  <nav class="bottom-nav" data-tab="tasks"><div class="nav-item" onclick="switchTab(0)"><span class="material-symbols-outlined">home</span><span>首页</span></div><div class="nav-item active" onclick="switchTab(1)"><span class="material-symbols-outlined">task_alt</span><span>任务</span></div><div class="nav-ai"><div class="nav-ai-btn" onclick="openChat()"><span class="material-symbols-outlined">auto_awesome</span></div><div class="nav-ai-label">小星</div></div><div class="nav-item" onclick="switchTab(2)"><span class="material-symbols-outlined">menu_book</span><span>知识库</span></div><div class="nav-item" onclick="switchTab(3)"><span class="material-symbols-outlined">person</span><span>我的</span></div></nav>
+</div>
+
+<!-- ===== KNOWLEDGE ===== -->
+<div id="screen-kb" class="screen">
+  <div class="status-bar"><span class="time">19:24</span><div class="notch"></div><div class="icons"><span class="material-symbols-outlined">signal_cellular_alt</span><span class="material-symbols-outlined">wifi</span><span class="material-symbols-outlined">battery_5_bar</span></div></div>
+  <div class="screen-body">
+    <div style="padding:0 20px 12px;"><h1 style="font-size:22px;font-weight:700;">知识库</h1></div>
+    <div class="kb-header">
+      <div class="kb-search"><span class="material-symbols-outlined">search</span><input type="text" placeholder="搜索知识 / 资料 / 课程"></div>
+    </div>
+    <div class="kb-top"><div class="kb-filter-btn" onclick="toggleKbFilter()"><span class="material-symbols-outlined">tune</span>筛选</div></div>
+    <div class="kb-list" id="kb-list"></div>
+  </div>
+  <nav class="bottom-nav" data-tab="kb"><div class="nav-item" onclick="switchTab(0)"><span class="material-symbols-outlined">home</span><span>首页</span></div><div class="nav-item" onclick="switchTab(1)"><span class="material-symbols-outlined">task_alt</span><span>任务</span></div><div class="nav-ai"><div class="nav-ai-btn" onclick="openChat()"><span class="material-symbols-outlined">auto_awesome</span></div><div class="nav-ai-label">小星</div></div><div class="nav-item active" onclick="switchTab(2)"><span class="material-symbols-outlined">menu_book</span><span>知识库</span></div><div class="nav-item" onclick="switchTab(3)"><span class="material-symbols-outlined">person</span><span>我的</span></div></nav>
+</div>
+
+<!-- ===== MINE ===== -->
+<div id="screen-mine" class="screen">
+  <div class="status-bar"><span class="time">19:24</span><div class="notch"></div><div class="icons"><span class="material-symbols-outlined">signal_cellular_alt</span><span class="material-symbols-outlined">wifi</span><span class="material-symbols-outlined">battery_5_bar</span></div></div>
+  <div class="screen-body">
+    <div style="padding-top:8px;"></div>
+    <div class="my-header">
+      <div class="my-avatar" onclick="showModal('modal-avatar')">J<div class="my-avatar-edit"><span class="material-symbols-outlined">photo_camera</span></div></div>
+      <div class="my-name" onclick="showModal('modal-nickname')">JMing</div>
+      <div class="my-id">ID: 20260315</div>
+    </div>
+    <div class="my-stats">
+      <div class="my-stat" onclick="navTo('screen-stats','screen-mine')"><div class="my-stat-num" id="my-stat-time">0h</div><div class="my-stat-label">累计学习</div></div>
+      <div class="my-stat"><div class="my-stat-num" id="my-stat-tasks">0</div><div class="my-stat-label">完成任务</div></div>
+      <div class="my-stat"><div class="my-stat-num" id="my-stat-streak">0</div><div class="my-stat-label">连续天数</div></div>
+    </div>
+    <!-- 学习状态卡片 -->
+    <div class="ls-card">
+      <div class="ls-header"><span class="material-symbols-outlined">analytics</span>学习状态</div>
+      <!-- 知识掌握度 -->
+      <div class="ls-section">
+        <div class="ls-section-title">知识掌握度</div>
+        <div id="ls-knowledge"></div>
+      </div>
+      <!-- 学习表现 -->
+      <div class="ls-section">
+        <div class="ls-section-title">学习表现</div>
+        <div class="ls-time-tabs" id="ls-time-tabs">
+          <div class="ls-time-tab active" onclick="switchLsTime(this,0)">今日</div>
+          <div class="ls-time-tab" onclick="switchLsTime(this,1)">本周</div>
+          <div class="ls-time-tab" onclick="switchLsTime(this,2)">累计</div>
+        </div>
+        <div class="ls-perf-grid" id="ls-perf"></div>
+      </div>
+      <!-- 学习趋势 -->
+      <div class="ls-section">
+        <div class="ls-section-title">学习趋势</div>
+        <div class="ls-trend">
+          <div class="ls-trend-item"><span class="ls-trend-label">本周</span><span class="ls-trend-up" id="ls-trend-week">↑ +12%</span></div>
+          <div class="ls-trend-item"><span class="ls-trend-label">本月</span><span class="ls-trend-up" id="ls-trend-month">↑ +25%</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="my-menu">
+      <div class="my-menu-item" onclick="navTo('screen-settings','screen-mine')"><span class="material-symbols-outlined">settings</span><span>账号设置</span><span class="material-symbols-outlined arrow">chevron_right</span></div>
+      <div class="my-menu-item" onclick="navTo('screen-help','screen-mine')"><span class="material-symbols-outlined">help</span><span>帮助与反馈</span><span class="material-symbols-outlined arrow">chevron_right</span></div>
+    </div>
+    <div class="my-logout"><button class="btn btn-full" onclick="showModal('modal-logout')">退出登录</button></div>
+  </div>
+  <nav class="bottom-nav" data-tab="mine"><div class="nav-item" onclick="switchTab(0)"><span class="material-symbols-outlined">home</span><span>首页</span></div><div class="nav-item" onclick="switchTab(1)"><span class="material-symbols-outlined">task_alt</span><span>任务</span></div><div class="nav-ai"><div class="nav-ai-btn" onclick="openChat()"><span class="material-symbols-outlined">auto_awesome</span></div><div class="nav-ai-label">小星</div></div><div class="nav-item" onclick="switchTab(2)"><span class="material-symbols-outlined">menu_book</span><span>知识库</span></div><div class="nav-item active" onclick="switchTab(3)"><span class="material-symbols-outlined">person</span><span>我的</span></div></nav>
+</div>
+
+<!-- ===== CHAT OVERLAY ===== -->
+<div class="chat-overlay" id="chat-overlay">
+  <div class="status-bar"><span class="time">19:24</span><div class="notch"></div><div class="icons"><span class="material-symbols-outlined">signal_cellular_alt</span><span class="material-symbols-outlined">wifi</span><span class="material-symbols-outlined">battery_5_bar</span></div></div>
+  <div class="chat-header">
+    <div class="chat-close" onclick="closeChat()"><span class="material-symbols-outlined">arrow_back_ios</span></div>
+    <div class="chat-header-avatars">
+      <div class="av ai"><span class="material-symbols-outlined" style="font-size:18px;">auto_awesome</span></div>
+      <div class="chat-header-conn"></div>
+      <div class="av me">J</div>
+    </div>
+    <div style="width:36px;"></div>
+  </div>
+  <div class="chat-body" id="chat-body">
+    <div class="chat-msg ai"><div class="chat-avatar ai-av"><span class="material-symbols-outlined">auto_awesome</span></div><div class="chat-bubble">你好呀！我是小星 ✨ 你的 AI 学习伙伴。我可以帮你推荐学习内容、整理笔记、制定学习计划。有什么想了解的，尽管问我吧！</div></div>
+  </div>
+  <div class="chat-input-bar">
+    <div class="chat-add-menu" id="chat-add-menu">
+      <div class="chat-add-item" onclick="handleAddItem('camera')"><span class="material-symbols-outlined">photo_camera</span>拍照</div>
+      <div class="chat-add-item" onclick="handleAddItem('photo')"><span class="material-symbols-outlined">image</span>照片</div>
+      <div class="chat-add-item" onclick="handleAddItem('file')"><span class="material-symbols-outlined">description</span>文件</div>
+      <div class="chat-add-item" onclick="handleAddItem('link')"><span class="material-symbols-outlined">link</span>链接</div>
+    </div>
+    <div class="chat-mic-hint" id="mic-hint">上滑取消录音</div>
+    <div class="chat-input-row">
+      <button class="chat-add-btn" onclick="toggleAddMenu()"><span class="material-symbols-outlined">add_circle</span></button>
+      <div class="chat-text-wrap"><textarea class="chat-text-input" id="chat-input" rows="1" placeholder="输入消息..." oninput="autoGrow(this);toggleSendBtn()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea></div>
+      <button class="chat-mic-btn" id="mic-btn" onclick="handleMicOrSend()"><span class="material-symbols-outlined">mic</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SUB SCREENS ===== -->
+<!-- Review Detail -->
+<div id="screen-review" class="screen">
+  <div class="status-bar" style="background:var(--gradient);"><span class="time" style="color:#fff;">19:24</span><div class="notch"></div><div class="icons"><span class="material-symbols-outlined" style="color:#fff;">signal_cellular_alt</span><span class="material-symbols-outlined" style="color:#fff;">wifi</span><span class="material-symbols-outlined" style="color:#fff;">battery_5_bar</span></div></div>
+  <div class="screen-body no-nav">
+    <div style="padding:8px 20px;"><div class="page-back" onclick="goBack()"><span class="material-symbols-outlined">arrow_back_ios</span>返回</div></div>
+    <div class="review-header-card"><div class="review-date">2026年3月15日（昨日）</div><div class="review-title">昨日学习复盘</div><div class="review-main-stats"><div class="review-stat-item"><div class="val">1h45m</div><div class="lbl">学习时长</div></div><div class="review-stat-item"><div class="val">3/3</div><div class="lbl">完成任务</div></div><div class="review-stat-item"><div class="val">88%</div><div class="lbl">正确率</div></div></div></div>
+    <div class="review-section"><div class="review-section-title"><span class="material-symbols-outlined" style="color:var(--primary);">show_chart</span>昨日学习时间分布</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <span style="font-size:13px;color:var(--text2);width:50px;flex-shrink:0;">UI设计</span>
+        <div style="flex:1;height:20px;background:#E2E8F0;border-radius:10px;overflow:hidden;"><div style="width:52%;height:100%;background:var(--gradient);border-radius:10px;"></div></div>
+        <span style="font-size:13px;color:var(--primary);font-weight:600;width:42px;text-align:right;">55m</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <span style="font-size:13px;color:var(--text2);width:50px;flex-shrink:0;">Python</span>
+        <div style="flex:1;height:20px;background:#E2E8F0;border-radius:10px;overflow:hidden;"><div style="width:35%;height:100%;background:var(--gradient);border-radius:10px;"></div></div>
+        <span style="font-size:13px;color:var(--primary);font-weight:600;width:42px;text-align:right;">37m</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:13px;color:var(--text2);width:50px;flex-shrink:0;">英语</span>
+        <div style="flex:1;height:20px;background:#E2E8F0;border-radius:10px;overflow:hidden;"><div style="width:13%;height:100%;background:var(--gradient);border-radius:10px;"></div></div>
+        <span style="font-size:13px;color:var(--primary);font-weight:600;width:42px;text-align:right;">13m</span>
+      </div>
+    </div>
+    <div class="review-section"><div class="review-section-title"><span class="material-symbols-outlined" style="color:var(--primary);">bar_chart</span>近7日学习趋势</div><div class="review-chart"><div class="review-bar" style="height:35%;"><div class="review-bar-val">1.0h</div><div class="review-bar-label">3/9</div></div><div class="review-bar" style="height:50%;"><div class="review-bar-val">1.4h</div><div class="review-bar-label">3/10</div></div><div class="review-bar" style="height:45%;"><div class="review-bar-val">1.3h</div><div class="review-bar-label">3/11</div></div><div class="review-bar" style="height:70%;"><div class="review-bar-val">2.1h</div><div class="review-bar-label">3/12</div></div><div class="review-bar" style="height:25%;"><div class="review-bar-val">0.7h</div><div class="review-bar-label">3/13</div></div><div class="review-bar" style="height:60%;"><div class="review-bar-val">1.8h</div><div class="review-bar-label">3/14</div></div><div class="review-bar today" style="height:58%;"><div class="review-bar-val">1.75h</div><div class="review-bar-label">昨天</div></div></div></div>
+    <div class="review-section"><div class="review-section-title"><span class="material-symbols-outlined" style="color:var(--green);">verified</span>昨日亮点</div><div class="review-highlights"><div class="review-highlight-item"><div class="review-highlight-icon good"><span class="material-symbols-outlined">check</span></div><div class="review-highlight-text"><strong>UI设计基础</strong> 掌握优秀，10 道题正确率 90%</div></div><div class="review-highlight-item"><div class="review-highlight-icon good"><span class="material-symbols-outlined">check</span></div><div class="review-highlight-text"><strong>Python循环语句</strong> 全部正确，正确率 100%</div></div><div class="review-highlight-item"><div class="review-highlight-icon good"><span class="material-symbols-outlined">check</span></div><div class="review-highlight-text">3个任务全部完成，学习时长比前日 <strong>提升 30%</strong></div></div><div class="review-highlight-item"><div class="review-highlight-icon bad"><span class="material-symbols-outlined">priority_high</span></div><div class="review-highlight-text"><strong>交互设计原则</strong> 正确率仅 75%，建议重点复习</div></div><div class="review-highlight-item"><div class="review-highlight-icon bad"><span class="material-symbols-outlined">priority_high</span></div><div class="review-highlight-text">英语词汇板块 <strong>仅学习 13 分钟</strong>，建议增加投入</div></div></div></div>
+    <div class="review-section" id="xiaoxing-suggest"><div class="review-section-title"><span class="material-symbols-outlined" style="color:var(--secondary);">auto_awesome</span>小星建议</div><div class="review-ai-card"><div class="ai-name"><span class="material-symbols-outlined">auto_awesome</span>小星</div>
+<p class="ai-section-title">📊 昨日数据</p>
+<div class="ai-data-row"><span>交互设计原则</span><span class="val-bad">75%</span></div>
+<div class="ai-data-row"><span>相关错题</span><span class="val-bad">3 道</span></div>
+<div class="ai-data-row"><span>英语学习时长</span><span class="val-bad">13 分钟</span></div>
+<div class="ai-data-row"><span>UI设计基础</span><span class="val-good">90% ✅</span></div>
+<div class="ai-data-row"><span>Python循环语句</span><span class="val-good">100% ✅</span></div>
+<div class="ai-judge"><div class="ai-judge-title"><span class="material-symbols-outlined">psychology</span>小星判断</div><div class="ai-judge-line">交互设计原则正确率 <strong class="val-bad">75%</strong>，低于 <strong>70%</strong> 阈值</div><div class="ai-judge-line">错题 <strong class="val-bad">≥ 3 道</strong>，优先级提升</div><div class="ai-judge-line">判定为 <strong>薄弱知识点</strong>，建议优先复习</div></div>
+<p class="ai-section-title">📋 今日建议</p>
+<div class="ai-suggest-line">→ ① 交互设计原则专项复习（30min）</div><div class="ai-suggest-reason">依据：正确率最低 + 错题最多</div>
+<div class="ai-suggest-line" style="margin-top:4px;">→ ② 英语四级词汇 50 个（20min）</div><div class="ai-suggest-reason">依据：学习时长低于推荐值</div>
+<div class="swap-batch" style="margin-top:14px;"><button class="swap-batch-btn" onclick="toggleSwapPrefs()"><span class="material-symbols-outlined">refresh</span>换一批</button></div><div class="swap-prefs" id="swap-prefs"><div class="swap-pref-chip" onclick="selectSwapPref(this,'补弱项')">🎯 补弱项</div><div class="swap-pref-chip" onclick="selectSwapPref(this,'提高难度')">📈 提高难度</div><div class="swap-pref-chip" onclick="selectSwapPref(this,'轻松一点')">😌 轻松一点</div><div class="swap-pref-chip" onclick="selectSwapPref(this,'换科目')">📚 换科目</div></div></div></div>
+  </div>
+</div>
+
+<!-- Notifications -->
+<div id="screen-notifications" class="screen">
+  <div class="status-bar"><span class="time">19:24</span><div class="notch"></div><div class="icons"><span class="material-symbols-outlined">signal_cellular_alt</span><span class="material-symbols-outlined">wifi</span><span class="material-symbols-outlined">battery_5_bar</span></div></div>
+  <div class="screen-body no-nav">
+    <div class="page-header" style="padding-top:4px;"><div class="page-back" onclick="goBack()"><span class="material-symbols-outlined">arrow_back_ios</span></div><h1 style="position:absolute;left:50%;transform:translateX(-50%);">学习提醒</h1><div style="width:60px;"></div></div>
+    <div class="notif-list">
+      <div class="notif-item" onclick="navHistory=['screen-home'];switchTab(0);setTimeout(function(){var body=document.querySelector('#screen-home .screen-body');if(body)body.scrollTop=body.scrollHeight;},300);"><div class="notif-icon ai"><span class="material-symbols-outlined">auto_awesome</span></div><div class="notif-content"><h4>小星学习建议</h4><p>建议复习「设计系统基础」，你在交互原则方面还需加强</p></div><div class="notif-time">17:20</div></div>
+      <div class="notif-item" onclick="switchTab(1);"><div class="notif-icon task"><span class="material-symbols-outlined">task_alt</span></div><div class="notif-content"><h4>任务提醒</h4><p>今日还有 2 个任务未完成</p></div><div class="notif-time">16:00</div></div>
+      <div class="notif-item" onclick="navHistory=['screen-home'];switchTab(0);setTimeout(function(){var card=document.getElementById('home-review-card');var body=document.querySelector('#screen-home .screen-body');if(card&&body)body.scrollTop=card.offsetTop-body.offsetTop;},300);"><div class="notif-icon review"><span class="material-symbols-outlined">summarize</span></div><div class="notif-content"><h4>昨日复盘已生成</h4><p>小星已为你生成3月15日学习复盘，点击查看</p></div><div class="notif-time">22:00</div></div>
+      <div class="notif-item" onclick="switchTab(2);"><div class="notif-icon ai"><span class="material-symbols-outlined">auto_awesome</span></div><div class="notif-content"><h4>新内容推荐</h4><p>发现「Figma 进阶技巧」课程，与你的学习方向匹配</p></div><div class="notif-time">14:30</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Task Learn -->
+<div id="screen-learn" class="screen">
+  <div class="status-bar"><span class="time">19:24</span><div class="notch"></div><div class="icons"><span class="material-symbols-outlined">signal_cellular_alt</span><span class="material-symbols-outlined">wifi</span><span class="material-symbols-outlined">battery_5_bar</span></div></div>
+  <div class="screen-body" style="padding-bottom:140px;">
+    <div class="page-header" style="padding-top:4px;"><div class="page-back" onclick="goBack()"><span class="material-symbols-outlined">arrow_back_ios</span>返回</div><h1 id="learn-title" style="position:absolute;left:50%;transform:translateX(-50%);">UI设计基础练习</h1><div style="width:60px;"></div></div>
+    <div class="learn-tabs"><div class="learn-tab active" onclick="switchLearnTab(this,0)">资料</div><div class="learn-tab" onclick="switchLearnTab(this,1)">视频</div><div class="learn-tab" onclick="switchLearnTab(this,2)">笔记</div><div class="learn-tab" onclick="switchLearnTab(this,3);showScreen('screen-quiz','slide-in');renderQuiz(0);">做题</div></div>
+    <div class="learn-content" id="learn-content-area">
+      <div class="learn-section"><div class="learn-section-title"><span class="material-symbols-outlined">article</span>设计系统基础</div><div style="font-size:14px;color:var(--text2);line-height:1.8;"><p>设计系统（Design System）是一组可复用的组件和标准的集合，用于构建大量产品。</p><br><p><strong style="color:var(--text1);">核心要素：</strong></p><p>1. 设计原则 — 指导设计的价值观和理念</p><p>2. 组件库 — 可复用的 UI 组件</p><p>3. 设计规范 — 颜色、字体、间距等标准</p><p>4. 图标系统 — 统一的图标风格</p><br><p><strong style="color:var(--text1);">设计原则：</strong></p><p>• 一致性 — 保持界面统一</p><p>• 可用性 — 用户能轻松使用</p><p>• 可访问性 — 所有用户都能使用</p><p>• 响应式 — 适配不同设备</p></div></div>
+      <div class="learn-section"><div class="learn-section-title"><span class="material-symbols-outlined">auto_awesome</span>小星总结</div><div class="review-ai-card" style="margin-bottom:0;"><div class="ai-name"><span class="material-symbols-outlined">auto_awesome</span>小星</div><p>本节重点：设计系统包含设计原则、组件库、设计规范和图标系统四大核心要素。其中设计原则是最重要的基础，一致性原则贯穿始终。</p></div></div>
+    </div>
+  </div>
+  <div class="learn-complete-bar"><div class="learn-progress-mini"><div class="bar"><div class="fill" style="width:25%;"></div></div><div class="labels"><span>学习进度</span><span>25%</span></div></div><button class="btn btn-gradient btn-full" onclick="markTaskDone();">完成任务</button></div>
+</div>
+
+<!-- Quiz -->
+<div id="screen-quiz" class="screen">
+  <div class="status-bar"><span class="time">19:24</span><div class="notch"></div><div class="icons"><span class="material-symbols-outlined">signal_cellular_alt</span><span class="material-symbols-outlined">wifi</span><span class="material-symbols-outlined">battery_5_bar</span></div></div>
+  <div class="screen-body no-nav">
+    <div class="page-header" style="padding-top:4px;"><div class="page-back" onclick="backToLearnDetail()"><span class="material-symbols-outlined">arrow_back_ios</span>返回</div><h1 style="position:absolute;left:50%;transform:translateX(-50%);">练习题</h1><div style="width:60px;"></div></div>
+    <div class="quiz-progress"><div class="quiz-progress-text">第 <span id="quiz-current">1</span> / <span id="quiz-total">3</span> 题</div><div class="quiz-progress-bar"><div class="fill" id="quiz-bar" style="width:33%;"></div></div></div>
+    <div id="quiz-container"></div>
+    <div class="quiz-submit" id="quiz-submit"><button class="btn btn-gradient btn-full" onclick="submitQuiz()">提交答案</button></div>
+    <div class="quiz-submit" id="quiz-next" style="display:none;"><button class="btn btn-gradient btn-full" onclick="nextQuiz()">下一题</button></div>
+  </div>
+</div>
+
+<!-- Knowledge Detail -->
+<div id="screen-kd" class="screen">
+  <div class="status-bar"><span class="time">19:24</span><div class="notch"></div><div class="icons"><span class="material-symbols-outlined">signal_cellular_alt</span><span class="material-symbols-outlined">wifi</span><span class="material-symbols-outlined">battery_5_bar</span></div></div>
+  <div class="screen-body no-nav">
+    <div class="page-header" style="padding-top:4px;"><div class="page-back" onclick="goBack()"><span class="material-symbols-outlined">arrow_back_ios</span>返回</div><h1 style="position:absolute;left:50%;transform:translateX(-50%);">知识详情</h1><div style="width:60px;"></div></div>
+    <div class="kd-content">
+      <h2 style="font-size:20px;font-weight:700;margin-bottom:8px;">UI 设计系统基础</h2>
+      <div style="display:flex;gap:6px;margin-bottom:16px;"><span class="badge badge-green">重点</span><span class="badge badge-purple">知识点</span><span class="badge badge-blue">B站</span></div>
+      <div class="kd-article"><p>设计系统是一套完整的 UI 设计标准和组件库，由设计原则、颜色体系、字体规范、间距系统、组件库和图标系统组成。</p><br><p><strong>设计原则</strong>是设计系统的核心指导方针，常见的包括：一致性、可用性、可访问性、反馈性等。</p><br><p><strong>颜色体系</strong>定义了品牌色、功能色、中性色的使用规范，确保颜色的一致性和可访问性。</p><br><p><strong>组件库</strong>包含了按钮、输入框、卡片等可复用的 UI 组件，每个组件都有明确的设计规范和使用指南。</p></div>
+      <div class="kd-ai-summary"><h3><span class="material-symbols-outlined">auto_awesome</span>小星总结</h3><p>本文介绍了设计系统的四大核心组成部分。重点掌握设计原则中的"一致性"原则，这是设计系统最基础也是最重要的概念。</p></div>
+      <div class="kd-actions"><button class="btn btn-gradient" style="flex:1;" onclick="navTo('screen-genquiz','screen-kd');"><span class="material-symbols-outlined" style="font-size:18px;">quiz</span>生成练习题</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Generate Quiz -->
+<div id="screen-genquiz" class="screen">
+  <div class="status-bar"><span class="time">19:24</span><div class="notch"></div><div class="icons"><span class="material-symbols-outlined">signal_cellular_alt</span><span class="material-symbols-outlined">wifi</span><span class="material-symbols-outlined">battery_5_bar</span></div></div>
+  <div class="screen-body no-nav">
+    <div class="page-header" style="padding-top:4px;"><div class="page-back" onclick="goBack()"><span class="material-symbols-outlined">arrow_back_ios</span>返回</div><h1 style="position:absolute;left:50%;transform:translateX(-50%);">生成练习题</h1><div style="width:60px;"></div></div>
+    <div class="gen-quiz-options">
+      <div class="gen-quiz-card"><h3>题目难度</h3><div class="filter-chips"><div class="filter-chip active" onclick="selectChip(this)">重点</div><div class="filter-chip" onclick="selectChip(this)">适中</div><div class="filter-chip" onclick="selectChip(this)">简单</div></div></div>
+      <div class="gen-quiz-card"><h3>任务时长</h3><div class="filter-chips"><div class="filter-chip" onclick="selectChip(this)">15分钟</div><div class="filter-chip active" onclick="selectChip(this)">30分钟</div><div class="filter-chip" onclick="selectChip(this)">45分钟</div><div class="filter-chip" onclick="selectChip(this)">60分钟</div></div></div>
+      <div class="gen-quiz-card"><h3>题目数量</h3><div class="filter-chips"><div class="filter-chip" onclick="selectChip(this)">5题</div><div class="filter-chip active" onclick="selectChip(this)">10题</div><div class="filter-chip" onclick="selectChip(this)">15题</div></div></div>
+      <button class="btn btn-gradient btn-full" style="margin-top:16px;" onclick="showModal('modal-add-task')"><span class="material-symbols-outlined" style="font-size:18px;">add_task</span>加入任务</button>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div id="screen-stats" class="screen">
+  <div class="status-bar"><span class="time">19:24</span><div class="notch"></div><div class="icons"><span class="material-symbols-outlined">signal_cellular_alt</span><span class="material-symbols-outlined">wifi</span><span class="material-symbols-outlined">battery_5_bar</span></div></div>
+  <div class="screen-body no-nav">
+    <div class="page-header" style="padding-top:4px;"><div class="page-back" onclick="goBack()"><span class="material-symbols-outlined">arrow_back_ios</span>返回</div><h1 style="position:absolute;left:50%;transform:translateX(-50%);">学习统计</h1><div style="width:60px;"></div></div>
+    <div class="stats-grid"><div class="stats-card"><div class="num" id="stats-total-time">0h</div><div class="lbl">累计学习</div></div><div class="stats-card"><div class="num" id="stats-total-tasks">0</div><div class="lbl">完成任务</div></div><div class="stats-card"><div class="num" id="stats-avg-acc">0%</div><div class="lbl">平均正确率</div></div><div class="stats-card"><div class="num" id="stats-streak">0天</div><div class="lbl">连续学习</div></div></div>
+    <div class="stats-chart-section"><h3>近7日学习时间</h3><div class="stats-bars"><div class="stats-bar" style="height:40%;"><div class="stats-bar-label">周一</div></div><div class="stats-bar" style="height:65%;"><div class="stats-bar-label">周二</div></div><div class="stats-bar" style="height:50%;"><div class="stats-bar-label">周三</div></div><div class="stats-bar" style="height:75%;"><div class="stats-bar-label">周四</div></div><div class="stats-bar" style="height:30%;"><div class="stats-bar-label">周五</div></div><div class="stats-bar" style="height:55%;"><div class="stats-bar-label">周六</div></div><div class="stats-bar" style="height:45%;"><div class="stats-bar-label">今天</div></div></div></div>
+    <div class="stats-chart-section"><h3>学习分布</h3><div style="padding:8px 0;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;"><span style="font-size:13px;color:var(--text2);width:60px;">设计</span><div style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;overflow:hidden;"><div style="width:45%;height:100%;background:var(--gradient);border-radius:4px;"></div></div><span style="font-size:13px;color:var(--text2);width:36px;text-align:right;">45%</span></div><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;"><span style="font-size:13px;color:var(--text2);width:60px;">编程</span><div style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;overflow:hidden;"><div style="width:30%;height:100%;background:var(--gradient);border-radius:4px;"></div></div><span style="font-size:13px;color:var(--text2);width:36px;text-align:right;">30%</span></div><div style="display:flex;align-items:center;gap:10px;"><span style="font-size:13px;color:var(--text2);width:60px;">英语</span><div style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;overflow:hidden;"><div style="width:25%;height:100%;background:var(--gradient);border-radius:4px;"></div></div><span style="font-size:13px;color:var(--text2);width:36px;text-align:right;">25%</span></div></div></div>
+  </div>
+</div>
+
+<!-- Settings -->
+<div id="screen-settings" class="screen">
+  <div class="status-bar"><span class="time">19:24</span><div class="notch"></div><div class="icons"><span class="material-symbols-outlined">signal_cellular_alt</span><span class="material-symbols-outlined">wifi</span><span class="material-symbols-outlined">battery_5_bar</span></div></div>
+  <div class="screen-body no-nav">
+    <div class="page-header" style="padding-top:4px;"><div class="page-back" onclick="goBack()"><span class="material-symbols-outlined">arrow_back_ios</span>返回</div><h1 style="position:absolute;left:50%;transform:translateX(-50%);">账号设置</h1><div style="width:60px;"></div></div>
+    <div style="height:12px;"></div>
+    <div class="settings-list"><div class="settings-item" onclick="showModal('modal-avatar')"><span class="material-symbols-outlined">account_circle</span><span>头像</span><div class="val">已设置</div><span class="material-symbols-outlined arrow">chevron_right</span></div><div class="settings-item" onclick="showModal('modal-nickname')"><span class="material-symbols-outlined">edit</span><span>昵称</span><div class="val">JMing</div><span class="material-symbols-outlined arrow">chevron_right</span></div><div class="settings-item"><span class="material-symbols-outlined">phone_iphone</span><span>手机号</span><div class="val">138****8888</div><span class="material-symbols-outlined arrow">chevron_right</span></div><div class="settings-item"><span class="material-symbols-outlined">notifications</span><span>通知设置</span><span class="material-symbols-outlined arrow">chevron_right</span></div><div class="settings-item"><span class="material-symbols-outlined">lock</span><span>隐私设置</span><span class="material-symbols-outlined arrow">chevron_right</span></div></div>
+    <div style="height:20px;"></div>
+    <div class="settings-list"><div class="settings-item" style="justify-content:center;" onclick="showModal('modal-logout')"><span style="color:var(--red);">退出登录</span></div></div>
+  </div>
+</div>
+
+<!-- Help -->
+<div id="screen-help" class="screen">
+  <div class="status-bar"><span class="time">19:24</span><div class="notch"></div><div class="icons"><span class="material-symbols-outlined">signal_cellular_alt</span><span class="material-symbols-outlined">wifi</span><span class="material-symbols-outlined">battery_5_bar</span></div></div>
+  <div class="screen-body no-nav">
+    <div class="page-header" style="padding-top:4px;"><div class="page-back" onclick="goBack()"><span class="material-symbols-outlined">arrow_back_ios</span>返回</div><h1 style="position:absolute;left:50%;transform:translateX(-50%);">帮助与反馈</h1><div style="width:60px;"></div></div>
+    <div class="help-section"><h3>常见问题</h3><div class="settings-list" style="margin:0;"><div class="settings-item"><span>如何创建学习任务？</span><span class="material-symbols-outlined arrow">chevron_right</span></div><div class="settings-item"><span>小星如何推荐学习内容？</span><span class="material-symbols-outlined arrow">chevron_right</span></div><div class="settings-item"><span>如何查看学习报告？</span><span class="material-symbols-outlined arrow">chevron_right</span></div></div></div>
+    <div class="help-section"><h3>意见反馈</h3><textarea class="help-textarea" placeholder="请描述你的问题或建议..."></textarea><button class="btn btn-gradient btn-full" style="margin-top:12px;">提交反馈</button></div>
+    <div class="help-section"><h3>联系我们</h3><div class="settings-list" style="margin:0;"><div class="settings-item"><span class="material-symbols-outlined">email</span><span>xingzhi@example.com</span></div><div class="settings-item"><span class="material-symbols-outlined">chat</span><span>微信客服：星知助手</span></div></div></div>
+  </div>
+</div>
+
+<!-- ===== MODALS ===== -->
+<div class="modal-overlay" id="modal-review" onclick="if(event.target===this)hideModal('modal-review')"><div class="modal-sheet"><div class="modal-handle"></div><div class="modal-title" id="report-title">任务学习报告</div><div class="review-result-stats"><div class="review-result-stat"><div class="val" style="color:var(--primary);" id="report-time">0m</div><div class="lbl">学习时长</div></div><div class="review-result-stat"><div class="val" style="color:var(--green);" id="report-acc">0%</div><div class="lbl">正确率</div></div><div class="review-result-stat"><div class="val" style="color:var(--orange);" id="report-errors">0</div><div class="lbl">错题数</div></div></div><div class="review-result-section" id="report-analysis"><h3><span class="material-symbols-outlined" style="color:var(--primary);">auto_awesome</span>小星分析</h3><p>暂无数据</p></div><div class="review-ai-card" id="report-suggest"><div class="ai-name"><span class="material-symbols-outlined">auto_awesome</span>小星建议</div><p>暂无建议</p></div><div class="modal-actions"><button class="btn btn-outline" onclick="hideModal('modal-review')">关闭</button><button class="btn btn-gradient" onclick="hideModal('modal-review');goBack();">返回任务</button></div></div></div>
+
+<div class="modal-overlay" id="modal-add-task" onclick="if(event.target===this)hideModal('modal-add-task')"><div class="modal-sheet" style="max-height:50%;"><div class="modal-handle"></div><div class="modal-title">确认加入任务？</div><div style="background:var(--bg);border-radius:var(--r-md);padding:16px;margin-bottom:20px;"><div style="font-size:14px;color:var(--text2);margin-bottom:8px;">将根据「UI设计系统基础」生成：</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><span class="badge badge-green">重点</span><span class="badge badge-blue">10道题</span><span class="badge badge-purple">30分钟</span></div></div><div class="modal-actions"><button class="btn btn-outline" onclick="hideModal('modal-add-task')">取消</button><button class="btn btn-gradient" onclick="hideModal('modal-add-task');goBack();switchTab(1);">确认加入</button></div></div></div>
+
+<div class="modal-overlay" id="modal-avatar" onclick="if(event.target===this)hideModal('modal-avatar')"><div class="modal-sheet" style="max-height:40%;"><div class="modal-handle"></div><div class="modal-title">更换头像</div><div class="modal-actions"><button class="btn btn-gradient" onclick="hideModal('modal-avatar')"><span class="material-symbols-outlined" style="font-size:18px;">photo_camera</span>拍照</button><button class="btn btn-outline" onclick="hideModal('modal-avatar')"><span class="material-symbols-outlined" style="font-size:18px;">photo_library</span>相册</button></div></div></div>
+
+<div class="modal-overlay" id="modal-nickname" onclick="if(event.target===this)hideModal('modal-nickname')"><div class="modal-sheet" style="max-height:45%;"><div class="modal-handle"></div><div class="modal-title">修改昵称</div><div class="form-group" style="margin-bottom:20px;"><input class="form-input" type="text" placeholder="输入新昵称" value="JMing"></div><div class="modal-actions"><button class="btn btn-outline" onclick="hideModal('modal-nickname')">取消</button><button class="btn btn-gradient" onclick="hideModal('modal-nickname')">保存</button></div></div></div>
+
+<div class="modal-overlay" id="modal-logout" onclick="if(event.target===this)hideModal('modal-logout')"><div class="modal-sheet" style="max-height:35%;"><div class="modal-handle"></div><div class="modal-title">确认退出登录？</div><p style="text-align:center;color:var(--text3);font-size:14px;margin-bottom:24px;">退出后需要重新登录</p><div class="modal-actions"><button class="btn btn-outline" onclick="hideModal('modal-logout')">取消</button><button class="btn btn-full" style="background:var(--red);color:#fff;" onclick="hideModal('modal-logout');showScreen('screen-login','slide-in');">确认退出</button></div></div></div>
+
+<!-- Filter Panels -->
+<div class="filter-panel" id="filter-panel"><div class="modal-handle"></div><div class="modal-title">筛选任务</div><div class="filter-group"><div class="filter-group-title">难度</div><div class="filter-chips" id="filter-diff"><div class="filter-chip" data-val="重点" onclick="selectFilterChip(this)">重点</div><div class="filter-chip" data-val="适中" onclick="selectFilterChip(this)">适中</div><div class="filter-chip" data-val="中等" onclick="selectFilterChip(this)">中等</div><div class="filter-chip" data-val="简单" onclick="selectFilterChip(this)">简单</div></div></div><div class="filter-group"><div class="filter-group-title">任务时长</div><div class="filter-chips" id="filter-dur"><div class="filter-chip" data-val="15" onclick="selectFilterChip(this)">15分钟</div><div class="filter-chip" data-val="30" onclick="selectFilterChip(this)">30分钟</div><div class="filter-chip" data-val="45" onclick="selectFilterChip(this)">45分钟</div><div class="filter-chip" data-val="60" onclick="selectFilterChip(this)">60分钟</div></div></div><div class="filter-actions"><button class="btn btn-outline" onclick="resetFilter()">重置</button><button class="btn btn-gradient" onclick="applyFilter()">确认</button></div></div>
+
+<div class="filter-panel" id="kb-filter-panel"><div class="modal-handle"></div><div class="modal-title">筛选知识</div><div class="filter-group"><div class="filter-group-title">难度</div><div class="filter-chips" id="kb-filter-diff"><div class="filter-chip" onclick="selectChip(this)" data-val="重点">重点</div><div class="filter-chip" onclick="selectChip(this)" data-val="中等">中等</div><div class="filter-chip" onclick="selectChip(this)" data-val="适中">适中</div><div class="filter-chip" onclick="selectChip(this)" data-val="简单">简单</div></div></div><div class="filter-group"><div class="filter-group-title">内容类型</div><div class="filter-chips" id="kb-filter-type"><div class="filter-chip" onclick="selectChip(this)" data-val="知识点">知识点</div><div class="filter-chip" onclick="selectChip(this)" data-val="视频">视频</div><div class="filter-chip" onclick="selectChip(this)" data-val="文章">文章</div></div></div><div class="filter-actions"><button class="btn btn-outline" onclick="resetKbFilter()">重置</button><button class="btn btn-gradient" onclick="applyKbFilter()">确认</button></div></div>
+
+</div><!-- end #app -->
+</div><!-- end #app-shell -->
+
+<script>
+// ===== DATA =====
+var todayTasks=[];
+var yesterdayTasks=[
+  {id:101,name:'JavaScript事件机制',duration:'35分钟',diff:'重点',status:'done',time:'32分钟',accuracy:'88%'},
+  {id:102,name:'React Hooks入门',duration:'30分钟',diff:'适中',status:'done',time:'28分钟',accuracy:'92%'},
+  {id:103,name:'CSS Grid布局',duration:'20分钟',diff:'简单',status:'done',time:'18分钟',accuracy:'95%'}
+];
+var earlierTasks=[];
+var tasks=todayTasks;
+var currentTask=null;
+var knowledge=[
+  {id:1,title:'UI设计系统基础',desc:'设计系统是一套完整的UI设计标准和组件库，包含设计原则、颜色体系、字体规范等。',tags:['重点','知识点','B站']},
+  {id:2,title:'Python基础：循环语句',desc:'掌握Python中的for循环和while循环，包括break、continue等控制语句的使用方法。',tags:['适中','知识点','B站']},
+  {id:3,title:'英语四级高频词汇500',desc:'精选英语四级考试高频词汇500个，按主题分类，附例句和记忆技巧。',tags:['简单','知识点','收藏']},
+  {id:4,title:'交互设计7大原则',desc:'Nielsen十大可用性原则和交互设计核心原则详解，帮助提升用户体验设计能力。',tags:['重点','知识点','B站']}
+];
+var quizData=[];
+var quizBank={
+'设计系统':[
+  {q:'设计系统中最基础也最重要的原则是？',opts:['美观性','一致性','创新性','复杂性'],ans:1},
+  {q:'以下哪个不是设计系统的核心要素？',opts:['设计原则','颜色体系','代码逻辑','组件库'],ans:2},
+  {q:'设计系统的主要作用是？',opts:['提升性能','保证产品一致性','减少代码量','加快编译'],ans:1}
+],
+'交互设计':[
+  {q:'Nielsen可用性原则中，"用户控制与自由"指的是？',opts:['强制引导','提供撤销和重做','自动保存','限制操作'],ans:1},
+  {q:'以下哪个属于交互设计原则？',opts:['色彩搭配','一致性','字体选择','图标设计'],ans:1},
+  {q:'交互设计的核心目标是？',opts:['美观','提升用户体验','减少成本','增加功能'],ans:1}
+],
+'色彩理论':[
+  {q:'色彩三要素不包括？',opts:['色相','明度','纯度','形状'],ans:3},
+  {q:'互补色在色轮上的关系是？',opts:['相邻','相对180°','间隔90°','相同位置'],ans:1},
+  {q:'以下哪个是暖色？',opts:['蓝色','绿色','橙色','紫色'],ans:2}
+],
+'设计史':[
+  {q:'包豪斯学校成立于哪个国家？',opts:['法国','德国','意大利','美国'],ans:1},
+  {q:'现代主义设计强调什么？',opts:['装饰性','功能性','复古','手工制作'],ans:1},
+  {q:'后现代主义设计的核心特征是？',opts:['极简','解构与装饰','功能至上','标准化'],ans:1}
+],
+'JavaScript':[
+  {q:'JavaScript中 let 和 var 的主要区别是？',opts:['运行速度','作用域','数据类型','返回值'],ans:1},
+  {q:'箭头函数的特点是？',opts:['有自己的this','继承外层this','不能有参数','必须是单行'],ans:1},
+  {q:'Promise的三种状态不包括？',opts:['pending','fulfilled','rejected','completed'],ans:3},
+  {q:'以下哪个不是JavaScript的数据类型？',opts:['undefined','symbol','float','bigint'],ans:2}
+],
+'React':[
+  {q:'useState Hook的作用是？',opts:['管理组件状态','发送网络请求','操作DOM','定义路由'],ans:0},
+  {q:'useEffect的第二个参数是？',opts:['状态值','依赖数组','回调函数','定时器'],ans:1},
+  {q:'React中 key 属性的作用是？',opts:['样式控制','帮助虚拟DOM高效更新','数据传递','权限控制'],ans:1},
+  {q:'以下哪个是React的生命周期方法？',opts:['onLoad','componentDidMount','onReady','onRender'],ans:1}
+],
+'CSS':[
+  {q:'Flexbox中，justify-content控制的是？',opts:['交叉轴对齐','主轴对齐','字体间距','边距大小'],ans:1},
+  {q:'CSS Grid中，grid-template-columns的作用是？',opts:['设置列模板','设置行模板','设置间距','设置颜色'],ans:0},
+  {q:'以下哪个CSS属性可以实现居中？',opts:['text-align:center','display:flex;justify-content:center','margin:auto','以上都可以'],ans:3},
+  {q:'CSS选择器优先级最高的是？',opts:['类选择器','ID选择器','标签选择器','伪类选择器'],ans:1}
+],
+'Python':[
+  {q:'Python中 for 循环遍历列表的正确写法是？',opts:['for i in list:','for(list i)','foreach list as i','for i = list'],ans:0},
+  {q:'break语句的作用是？',opts:['跳过本次循环','终止整个循环','重新开始循环','暂停循环'],ans:1},
+  {q:'Python中 range(5)生成的序列是？',opts:['1,2,3,4,5','0,1,2,3,4','0,1,2,3,4,5','1,2,3,4'],ans:1},
+  {q:'列表推导式 [x*2 for x in range(3)] 的结果是？',opts:['[0,2,4]','[2,4,6]','[0,1,2]','[1,2,3]'],ans:1}
+],
+'英语':[
+  {q:'"abundant" 的中文含义是？',opts:['稀少的','丰富的','普通的','困难的'],ans:1},
+  {q:'"contribute" 最接近的含义是？',opts:['消耗','贡献、捐助','减少','忽略'],ans:1},
+  {q:'四级写作中，议论文的常见结构是？',opts:['总-分-总','只列举','只对比','问答式'],ans:0},
+  {q:'听力考试中，抓住关键词的作用是？',opts:['提高语速','定位答案','减少笔记','跳过题目'],ans:1}
+],
+'Git':[
+  {q:'git merge的作用是？',opts:['删除分支','合并分支','创建分支','重命名'],ans:1},
+  {q:'以下哪个命令查看提交历史？',opts:['git status','git log','git diff','git show'],ans:1},
+  {q:'git pull 等价于哪两个命令的组合？',opts:['add + commit','fetch + merge','push + commit','branch + checkout'],ans:1}
+],
+'HTTP':[
+  {q:'HTTP状态码 404 表示？',opts:['服务器错误','未找到资源','请求成功','重定向'],ans:1},
+  {q:'RESTful API中，POST通常用于？',opts:['获取数据','创建资源','删除资源','更新资源'],ans:1},
+  {q:'HTTP和HTTPS的主要区别是？',opts:['速度不同','HTTPS有加密','端口相同','协议一样'],ans:1}
+],
+'Figma':[
+  {q:'Figma中 Auto Layout 的作用是？',opts:['手动排列','自动布局和响应式','添加动画','导出图片'],ans:1},
+  {q:'Figma组件变体的用途是？',opts:['改变颜色','管理组件的不同状态','删除组件','复制画布'],ans:1}
+]
+};
+function loadQuizForTask(){
+  if(!currentTask){quizData=[];return;}
+  var name=currentTask.name;
+  var matched=null;var bestScore=0;
+  for(var key in quizBank){
+    var score=0;
+    name.split(/[\s()（）]+/).forEach(function(kw){if(kw.length>0&&(key.indexOf(kw)>=0||name.indexOf(key)>=0))score+=2;});
+    if(score>bestScore){bestScore=score;matched=key;}
+  }
+  if(matched&&bestScore>0){
+    quizData=shuffle(quizBank[matched].slice()).slice(0,Math.min(4,quizBank[matched].length));
+  }else{
+    quizData=[
+      {q:'关于「'+name+'」以下哪个描述是正确的？',opts:['以上都正确','以上都不正确','需要进一步学习','暂无相关题目'],ans:0},
+      {q:'「'+name+'」的学习目标是什么？',opts:['掌握核心概念','了解基本原理','以上都是','仅作了解'],ans:2},
+      {q:'学习「'+name+'」建议的方法是？',opts:['只看不做','理论结合实践','只背不练','临时抱佛脚'],ans:1}
+    ];
+  }
+  currentQuiz=0;selectedOpt=-1;quizDone=false;
+  renderQuiz(0);
+}
+function renderTaskReport(){
+  if(!currentTask)return;
+  var t=currentTask;
+  var mins=parseInt(t.time)||0,acc=parseInt(t.accuracy)||0;
+  var errors=acc>=100?0:Math.max(1,Math.round((100-acc)*0.03));
+  var titleEl=document.getElementById('report-title');if(titleEl)titleEl.textContent=t.name+' - 学习报告';
+  var timeEl=document.getElementById('report-time');if(timeEl)timeEl.textContent=mins>0?mins+'m':'0m';
+  var accEl=document.getElementById('report-acc');if(accEl){accEl.textContent=acc+'%';accEl.style.color=acc>=80?'var(--green)':'var(--orange)';}
+  var errEl=document.getElementById('report-errors');if(errEl)errEl.textContent=errors;
+  var analysisEl=document.getElementById('report-analysis');
+  if(analysisEl){
+    var analysis=acc>=90?'你对「'+t.name+'」掌握非常好，正确率达到了 '+acc+'%，继续保持！':acc>=70?'你对「'+t.name+'」掌握良好，正确率 '+acc+'%。建议对错题部分进行针对性复习，巩固薄弱知识点。':'「'+t.name+'」的正确率为 '+acc+'%，建议重新阅读资料后再次练习，重点理解核心概念。';
+    analysisEl.innerHTML='<h3><span class="material-symbols-outlined" style="color:var(--primary);">auto_awesome</span>小星分析</h3><p>'+analysis+'</p>';
+  }
+  var suggestEl=document.getElementById('report-suggest');
+  if(suggestEl){
+    var suggest=acc>=90?'太棒了！建议进入下一个难度的学习，或者复习其他科目保持学习节奏。✨':acc>=70?'建议花 10-15 分钟复习错题部分，可以用"补弱项"模式生成针对性练习。':acc>=50?'建议重新学习本节资料，重点关注核心概念，然后再做一次练习巩固。':'基础还需要加强，建议从更简单的入门内容开始，循序渐进。';
+    suggestEl.innerHTML='<div class="ai-name"><span class="material-symbols-outlined">auto_awesome</span>小星建议</div><p>'+suggest+'</p>';
+  }
+}
+var navHistory=['screen-home'];
+
+// ===== GREETING =====
+function setGreeting(){
+  var el=document.getElementById('greeting-hi');if(!el)return;
+  var h=new Date().getHours();
+  var lastLogin=localStorage.getItem('xz_last_login');
+  var now=Math.floor(Date.now()/86400000);
+  var text='';
+  if(lastLogin){
+    var daysSince=now-parseInt(lastLogin);
+    if(daysSince>=7)text='好久不见，欢迎回来 ✨';
+    else if(daysSince>=3)text='几天不见，继续加油 💪';
+    else if(daysSince>=1)text='欢迎回来 👋';
+  }
+  if(!text){
+    if(h>=5&&h<8)text='早上好 🌅';
+    else if(h>=8&&h<11)text='上午好 ☀️';
+    else if(h>=11&&h<13)text='中午好 🍱';
+    else if(h>=13&&h<17)text='下午好 ☕';
+    else if(h>=17&&h<19)text='傍晚好 🌇';
+    else if(h>=19&&h<22)text='晚上好 🌙';
+    else text='夜深了，早点休息 🌟';
+  }
+  el.textContent=text;
+  localStorage.setItem('xz_last_login',now);
+}
+setGreeting();
+setInterval(setGreeting,60000);
+
+// ===== ROCKET LAUNCH =====
+var rocketFlying=false;
+function launchRocket(){
+  if(rocketFlying)return;
+  rocketFlying=true;
+  var card=document.getElementById('streak-card');
+  var rw=document.getElementById('rocket-wrapper');
+  if(!rw){rocketFlying=false;return;}
+  if(card)card.style.overflow='visible';
+  rw.classList.remove('returning');
+  void rw.offsetWidth;
+  rw.classList.add('launching');
+  setTimeout(function(){
+    rw.classList.remove('launching');
+    void rw.offsetWidth;
+    rw.classList.add('returning');
+    setTimeout(function(){
+      rw.classList.remove('returning');
+      if(card)card.style.overflow='hidden';
+      rocketFlying=false;
+    },700);
+  },800);
+}
+var currentQuiz=0;
+var selectedOpt=-1;
+var quizDone=false;
+
+// ===== NAVIGATION =====
+var screens={
+  'screen-home':0,'screen-tasks':1,'screen-kb':2,'screen-mine':3,
+  'screen-login':-1,'screen-register':-1,'screen-review':-1,'screen-notifications':-1,
+  'screen-learn':-1,'screen-quiz':-1,'screen-kd':-1,'screen-genquiz':-1,
+  'screen-stats':-1,'screen-settings':-1,'screen-help':-1
+};
+var tabIds=['screen-home','screen-tasks','screen-kb','screen-mine'];
+
+// 导航到子页面，自动确保父页面在历史栈中
+function navTo(target,parent){
+  if(navHistory[navHistory.length-1]!==parent)navHistory.push(parent);
+  showScreen(target,'slide-in');
+}
+function showScreen(id,anim,skipHistory){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active','slide-in');});
+  var el=document.getElementById(id);
+  if(!el)return;
+  el.classList.add('active');
+  if(anim)el.classList.add('slide-in');
+  if(screens[id]!==undefined&&screens[id]>=0)setTab(screens[id]);
+  else{var ts=document.querySelectorAll('.bottom-nav');ts.forEach(function(n){n.querySelectorAll('.nav-item').forEach(function(i){i.classList.remove('active');});});}
+  if(!skipHistory&&id!=='screen-login'&&id!=='screen-register'&&id!=='screen-notifications'&&id!=='chat-overlay')navHistory.push(id);
+}
+function goBack(){
+  navHistory.pop();if(navHistory.length<1)navHistory=['screen-home'];
+  showScreen(navHistory[navHistory.length-1],null,true);
+}
+function switchTab(idx){
+  showScreen(tabIds[idx],null,true);
+  setTab(idx);
+}
+function setTab(idx){
+  document.querySelectorAll('.bottom-nav').forEach(function(nav){
+    var items=nav.querySelectorAll('.nav-item');
+    items.forEach(function(i,n){i.classList.toggle('active',n===idx);});
+  });
+}
+
+// ===== LOGIN SYSTEM =====
+var users=JSON.parse(localStorage.getItem('xz_users')||'{}');
+function saveUsers(){localStorage.setItem('xz_users',JSON.stringify(users));}
+function doLogin(){
+  var phone=document.getElementById('login-phone').value.trim();
+  var pw=document.getElementById('login-pw').value;
+  if(!phone||phone.length<11){showToast('请输入正确的手机号');return;}
+  if(!pw){showToast('请输入密码');return;}
+  if(!users[phone]){showToast('该手机号未注册');return;}
+  if(users[phone]!==pw){showToast('密码错误');return;}
+  showToast('登录成功！');
+  localStorage.setItem('xz_last_login',Math.floor(Date.now()/86400000));
+  setTimeout(function(){showScreen('screen-home','slide-in');navHistory=['screen-home'];setTab(0);setGreeting();},600);
+}
+function doRegister(){
+  var inputs=document.querySelectorAll('#screen-register .form-input');
+  var phone=inputs[0].value.trim(),code=inputs[1].value.trim(),pw=inputs[2].value,pw2=inputs[3].value;
+  if(!phone||phone.length<11){showToast('请输入正确的手机号');return;}
+  if(code!==currentCode||!code){showToast('验证码错误');return;}
+  if(!pw||pw.length<6){showToast('密码至少6位');return;}
+  if(pw!==pw2){showToast('两次密码不一致');return;}
+  if(users[phone]){showToast('该手机号已注册');return;}
+  users[phone]=pw;saveUsers();
+  showToast('注册成功！');
+  setTimeout(function(){showScreen('screen-home','slide-in');navHistory=['screen-home'];setTab(0);},600);
+}
+function doResetPw(){
+  var phone=document.getElementById('forgot-phone').value.trim();
+  var code=document.getElementById('forgot-code').value.trim();
+  var pw=document.getElementById('forgot-pw').value;
+  var pw2=document.getElementById('forgot-pw2').value;
+  if(!phone||phone.length<11){showToast('请输入正确的手机号');return;}
+  if(code!==currentCode||!code){showToast('验证码错误');return;}
+  if(!pw||pw.length<6){showToast('密码至少6位');return;}
+  if(pw!==pw2){showToast('两次密码不一致');return;}
+  if(!users[phone]){showToast('该手机号未注册');return;}
+  users[phone]=pw;saveUsers();
+  showToast('密码重置成功！');
+  setTimeout(function(){showScreen('screen-login');},600);
+}
+function socialLogin(platform){
+  showToast('正在通过'+platform+'登录...');
+  setTimeout(function(){
+    if(platform==='微信')users['wx_user']='wx_logged_in';
+    else users['dy_user']='dy_logged_in';
+    saveUsers();
+    showToast('登录成功！');
+    setTimeout(function(){showScreen('screen-home','slide-in');navHistory=['screen-home'];setTab(0);},500);
+  },1500);
+}
+
+// ===== USER DATA PERSISTENCE =====
+function getDateStr(d){d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function getYesterdayStr(){var d=new Date();d.setDate(d.getDate()-1);return getDateStr(d);}
+function loadLearnData(){try{return JSON.parse(localStorage.getItem('xz_learn_data'))||null;}catch(e){return null;}}
+function saveLearnData(){localStorage.setItem('xz_learn_data',JSON.stringify(learnData));}
+var learnData=loadLearnData()||{streak:0,lastActiveDate:null,totalTasks:0,totalTime:0,dailyLog:{}};
+var achievements=[7,30,60,90,120,150,180,210,240,270,300,330,360];
+
+// ===== 今日任务持久化 + 每日归档 =====
+function saveTodayTasks(){localStorage.setItem('xz_today_tasks_date',getDateStr());localStorage.setItem('xz_today_tasks',JSON.stringify(todayTasks));}
+function loadTodayTasks(){
+  try{
+    var d=localStorage.getItem('xz_today_tasks_date');
+    var today=getDateStr();
+    if(d&&d===getYesterdayStr()&&d!==today){
+      // 保存的是昨天的任务 → 归档为昨日任务
+      try{
+        var saved=JSON.parse(localStorage.getItem('xz_today_tasks')||'[]');
+        yesterdayTasks=saved.filter(function(t){return t.status==='done';}).map(function(t){
+          return {id:t.id,name:t.name,duration:t.duration||'20分钟',diff:t.diff||'适中',status:'done',time:t.time||'0分钟',accuracy:t.accuracy||'0%'};
+        });
+      }catch(e){}
+      todayTasks=[];
+    }else if(d===today){
+      try{todayTasks=JSON.parse(localStorage.getItem('xz_today_tasks')||'[]');}catch(e){todayTasks=[];}
+    }else{
+      todayTasks=[];
+    }
+  }catch(e){todayTasks=[];}
+}
+// 从 dailyLog 反向填充 yesterdayTasks（保证与复盘数据一致）
+function populateYesterdayFromLog(){
+  var yd=getYesterdayStr();
+  var log=learnData.dailyLog[yd];
+  if(log&&log.taskNames&&log.taskNames.length>0){
+    yesterdayTasks=log.taskNames.map(function(tn,i){
+      return {id:100+i,name:tn.name,duration:tn.time+'分钟',diff:'适中',status:'done',time:tn.time+'分钟',accuracy:tn.accuracy+'%'};
+    });
+  }
+}
+// 从 dailyLog 填充更早的任务（2天前及更早）
+function populateEarlierTasks(){
+  earlierTasks=[];
+  var today=new Date();
+  for(var i=2;i<30;i++){
+    var d=new Date(today);d.setDate(d.getDate()-i);
+    var ds=getDateStr(d);
+    var log=learnData.dailyLog[ds];
+    if(log&&log.taskNames&&log.taskNames.length>0){
+      var dateLabel=(d.getMonth()+1)+'/'+d.getDate();
+      log.taskNames.forEach(function(tn,j){
+        earlierTasks.push({id:200+i*10+j,name:tn.name,duration:tn.time+'分钟',diff:'适中',status:'done',time:tn.time+'分钟',accuracy:tn.accuracy+'%',date:dateLabel});
+      });
+    }
+  }
+}
+
+// ===== 昨日数据种子（从 yesterdayTasks 写入 dailyLog）=====
+function seedYesterdayData(){
+  var yd=getYesterdayStr();
+  if(!yesterdayTasks||yesterdayTasks.length===0)return;
+  var existing=learnData.dailyLog[yd];
+  if(existing&&existing.taskNames&&existing.taskNames.length>0)return;
+  var totalAcc=0,totalMin=0,subjects={},taskNames=[];
+  var sMap={JavaScript:'编程',React:'编程',CSS:'编程',HTML:'编程',Python:'Python',Git:'编程',HTTP:'编程',Vue:'编程',UI:'UI设计',Figma:'UI设计',英语:'英语',四级:'英语'};
+  yesterdayTasks.forEach(function(t){
+    if(t.status!=='done')return;
+    var mins=parseInt(t.time)||0,acc=parseInt(t.accuracy)||0;
+    totalMin+=mins;totalAcc+=acc;
+    var sub='其他';for(var k in sMap){if(t.name.indexOf(k)>=0){sub=sMap[k];break;}}
+    if(!subjects[sub])subjects[sub]={time:0,accuracy:0,questions:0};
+    subjects[sub].time+=mins;
+    subjects[sub].accuracy=Math.round((subjects[sub].accuracy*subjects[sub].questions+acc)/(subjects[sub].questions+1));
+    subjects[sub].questions++;
+    taskNames.push({name:t.name,subject:sub,time:mins,accuracy:acc});
+  });
+  learnData.dailyLog[yd]={completedCount:yesterdayTasks.filter(function(t){return t.status==='done';}).length,totalCount:yesterdayTasks.length,totalAccuracy:totalAcc,totalTime:totalMin,subjects:subjects,taskNames:taskNames};
+  saveLearnData();
+}
+function getNextAchiev(cur){for(var i=0;i<achievements.length;i++){if(cur<achievements[i])return achievements[i];}return achievements[achievements.length-1]+30;}
+function getPrevAchiev(cur){var prev=0;for(var i=0;i<achievements.length;i++){if(cur<achievements[i])return prev;prev=achievements[i];}return prev;}
+function ensureTodayLog(){var today=getDateStr();if(!learnData.dailyLog[today]){learnData.dailyLog[today]={tasks:[],completedCount:0,totalCount:todayTasks.length,totalAccuracy:0,totalTime:0,subjects:{}};}return learnData.dailyLog[today];}
+function fmtTime(min){if(min<=0)return '0m';var h=Math.floor(min/60),m=min%60;return h>0?h+'h'+(m>0?m+'m':''):m+'m';}
+// ===== LEARNING STATE（从 dailyLog 实时计算）=====
+var learningState={knowledge:{},performance:{today:{accuracy:0,completion:'0/0',time:'0m'},week:{accuracy:0,completion:'0/0',time:'0m'},total:{accuracy:0,completion:'0/0',time:'0m'}},trends:{week:'↑ +0%',month:'↑ +0%'},totals:{totalTime:0,totalDone:0,totalAcc:0,totalQ:0}};
+
+function recomputeLearningState(){
+  var todayS=getDateStr();
+  var todayD=new Date();var dow=todayD.getDay();
+  var mondayOff=dow===0?-6:1-dow;
+
+  // 1. 遍历 dailyLog，汇总科目数据
+  var subjectAccum={};var allTime=0,allDone=0,allAcc=0,allQ=0,allTotalCount=0;
+
+  for(var date in learnData.dailyLog){
+    var log=learnData.dailyLog[date];
+    allTime+=log.totalTime||0;allDone+=log.completedCount||0;
+    allAcc+=log.totalAccuracy||0;allQ+=log.completedCount||0;
+    allTotalCount+=log.totalCount||0;
+    if(log.subjects){
+      for(var sub in log.subjects){
+        var s=log.subjects[sub];
+        if(!subjectAccum[sub])subjectAccum[sub]={accW:0,qCount:0,time:0};
+        subjectAccum[sub].accW+=s.accuracy*s.questions;
+        subjectAccum[sub].qCount+=s.questions;
+        subjectAccum[sub].time+=s.time;
+      }
+    }
+  }
+
+  // 2. 知识掌握度
+  var knowledge={};
+  for(var sub in subjectAccum){
+    var a=subjectAccum[sub];
+    var mastery=a.qCount>0?Math.round(a.accW/a.qCount):0;
+    var prev=Math.max(0,mastery-Math.floor(Math.random()*6+1));
+    var diff=mastery-prev;
+    knowledge[sub]={mastery:mastery,prev:prev,trend:(diff>=0?'+':'')+diff+'%',reason:'基于 '+a.qCount+' 道题综合',history:[Math.max(0,mastery-8),Math.max(0,mastery-5),Math.max(0,mastery-2),mastery],errors:0};
+  }
+
+  // 3. 今日表现
+  var tLog=learnData.dailyLog[todayS]||{};
+  var todayAcc=tLog.completedCount>0?Math.round(tLog.totalAccuracy/tLog.completedCount):0;
+
+  // 4. 本周表现
+  var wTime=0,wAcc=0,wQ=0,wDone=0,wTotal=0;
+  for(var i=0;i<7;i++){var d=new Date(todayD);d.setDate(todayD.getDate()+mondayOff+i);
+    var dl=learnData.dailyLog[getDateStr(d)];if(dl){wTime+=dl.totalTime;wAcc+=dl.totalAccuracy;wQ+=dl.completedCount;wDone+=dl.completedCount;wTotal+=dl.totalCount;}}
+
+  // 5. 趋势：本周vs上周，本月(近30天)vs上期(30-60天前)
+  var lwTime=0;for(var i=7;i<14;i++){var d=new Date(todayD);d.setDate(todayD.getDate()-i);var dl=learnData.dailyLog[getDateStr(d)];if(dl)lwTime+=dl.totalTime;}
+  var wTrend=lwTime>0?Math.round((wTime-lwTime)/lwTime*100):0;
+  var lmTime=0,mTime=0;
+  for(var i=0;i<30;i++){var d=new Date(todayD);d.setDate(todayD.getDate()-i);var dl=learnData.dailyLog[getDateStr(d)];if(dl)mTime+=dl.totalTime;}
+  for(var i=30;i<60;i++){var d=new Date(todayD);d.setDate(todayD.getDate()-i);var dl=learnData.dailyLog[getDateStr(d)];if(dl)lmTime+=dl.totalTime;}
+  var mTrend=lmTime>0?Math.round((mTime-lmTime)/lmTime*100):0;
+
+  learningState={
+    knowledge:knowledge,
+    performance:{
+      today:{accuracy:todayAcc,completion:(tLog.completedCount||0)+'/'+(tLog.totalCount||0),time:fmtTime(tLog.totalTime||0)},
+      week:{accuracy:wQ>0?Math.round(wAcc/wQ):0,completion:wDone+'/'+wTotal,time:fmtTime(wTime)},
+      total:{accuracy:allQ>0?Math.round(allAcc/allQ):0,completion:allDone+'/'+allTotalCount,time:fmtTime(allTime)}
+    },
+    trends:{week:(wTrend>=0?'↑ +':'↓ ')+Math.abs(wTrend)+'%',month:(mTrend>=0?'↑ +':'↓ ')+Math.abs(mTrend)+'%'},
+    totals:{totalTime:allTime,totalDone:allDone,totalAcc:allAcc,totalQ:allQ}
+  };
+}
+
+// ===== STRUCTURED CONTENT LIBRARY (内容库) =====
+var contentLibrary=[
+  {id:1,subject:'设计史',topic:'现代主义发展',type:'知识点',difficulty:'中等',duration:'20min',tags:['现代主义','功能主义','包豪斯'],desc:'从工艺美术运动到包豪斯，现代主义设计的发展历程。'},
+  {id:2,subject:'设计史',topic:'包豪斯学校',type:'知识点',difficulty:'重点',duration:'25min',tags:['包豪斯','现代主义','设计教育'],desc:'包豪斯的设计理念、代表人物及其对当代设计的影响。'},
+  {id:3,subject:'设计史',topic:'后现代主义设计',type:'知识点',difficulty:'中等',duration:'20min',tags:['后现代主义','解构','装饰'],desc:'后现代主义设计的起源、特征与代表作品。'},
+  {id:4,subject:'设计史',topic:'设计史时间线总结',type:'知识点',difficulty:'简单',duration:'15min',tags:['时间线','设计史','总结'],desc:'从1850年至今的工业设计发展脉络。'},
+  {id:5,subject:'设计史',topic:'经典设计流派辨析',type:'练习题',difficulty:'重点',duration:'30min',tags:['流派','辨析','做题'],desc:'10道题辨析各设计流派的核心理念与代表人物。'},
+  {id:6,subject:'色彩理论',topic:'色彩三要素与色轮',type:'知识点',difficulty:'简单',duration:'15min',tags:['色相','明度','纯度','色轮'],desc:'色相、明度、纯度的概念及色轮的基本原理。'},
+  {id:7,subject:'色彩理论',topic:'配色法则与实际应用',type:'知识点',difficulty:'适中',duration:'25min',tags:['配色','对比','和谐'],desc:'互补色、类似色、三角配色的原理与UI设计中的应用。'},
+  {id:8,subject:'色彩理论',topic:'色彩心理学入门',type:'知识点',difficulty:'中等',duration:'20min',tags:['心理','情绪','品牌'],desc:'不同色彩引发的心理感受及其在品牌设计中的运用。'},
+  {id:9,subject:'色彩理论',topic:'配色实战练习',type:'练习题',difficulty:'适中',duration:'30min',tags:['配色','练习','UI'],desc:'8道题训练不同场景下的配色方案选择能力。'},
+  {id:10,subject:'设计系统',topic:'UI设计系统基础',type:'知识点',difficulty:'重点',duration:'25min',tags:['设计原则','组件库','规范'],desc:'设计系统的四大核心要素：设计原则、组件库、设计规范、图标系统。'},
+  {id:11,subject:'设计系统',topic:'交互设计7大原则',type:'知识点',difficulty:'重点',duration:'25min',tags:['Nielsen','可用性','交互'],desc:'Nielsen十大可用性原则和交互设计核心原则详解。'},
+  {id:12,subject:'编程',topic:'Python基础：循环语句',type:'知识点',difficulty:'适中',duration:'25min',tags:['for','while','break','continue'],desc:'掌握Python中的for循环和while循环及控制语句。'},
+  {id:13,subject:'英语',topic:'英语四级高频词汇500',type:'知识点',difficulty:'简单',duration:'30min',tags:['词汇','四级','例句'],desc:'精选英语四级考试高频词汇500个，按主题分类。'},
+  {id:14,subject:'设计系统',topic:'Figma组件设计实战',type:'知识点',difficulty:'适中',duration:'30min',tags:['Figma','组件','Auto Layout'],desc:'使用Figma的Auto Layout和组件变体系统设计真实UI组件。'},
+  {id:15,subject:'设计系统',topic:'设计规范文档编写',type:'知识点',difficulty:'适中',duration:'20min',tags:['规范','文档','Design Token'],desc:'学习如何编写设计规范文档，包括间距系统、色彩Token和排版规则。'},
+  {id:16,subject:'编程',topic:'JavaScript ES6+核心语法',type:'知识点',difficulty:'适中',duration:'30min',tags:['箭头函数','解构','Promise','模块化'],desc:'掌握JavaScript现代语法：箭头函数、解构赋值、Promise、async/await。'},
+  {id:17,subject:'编程',topic:'CSS Flexbox完全指南',type:'知识点',difficulty:'简单',duration:'25min',tags:['flex','对齐','布局','响应式'],desc:'Flexbox的六大核心属性详解，配合实战案例掌握弹性布局。'},
+  {id:18,subject:'编程',topic:'React Hooks深入理解',type:'知识点',difficulty:'重点',duration:'35min',tags:['useState','useEffect','自定义Hook'],desc:'深入理解React Hooks的工作原理、性能优化和自定义Hook开发。'},
+  {id:19,subject:'编程',topic:'Git版本控制实战',type:'知识点',difficulty:'适中',duration:'25min',tags:['分支','合并','冲突','团队协作'],desc:'Git分支管理、合并冲突解决和团队协作工作流。'},
+  {id:20,subject:'编程',topic:'HTTP协议与RESTful API',type:'知识点',difficulty:'适中',duration:'20min',tags:['HTTP','REST','状态码','接口'],desc:'HTTP协议核心概念、请求方法、状态码及RESTful API设计原则。'},
+  {id:21,subject:'英语',topic:'四级听力技巧与训练',type:'练习题',difficulty:'适中',duration:'30min',tags:['听力','真题','技巧'],desc:'英语四级听力应试技巧与10道模拟训练题。'},
+  {id:22,subject:'英语',topic:'四级写作模板与范文',type:'知识点',difficulty:'适中',duration:'25min',tags:['写作','模板','议论文','应用文'],desc:'四级写作万能模板：议论文、应用文、图画作文的框架与高分范文。'},
+  {id:23,subject:'设计史',topic:'极简主义设计',type:'知识点',difficulty:'简单',duration:'15min',tags:['极简','留白','Dieter Rams'],desc:'从Dieter Rams到苹果，极简主义设计的核心理念与当代应用。'},
+  {id:24,subject:'设计史',topic:'日本设计美学',type:'知识点',difficulty:'适中',duration:'20min',tags:['侘寂','原研哉','无印良品'],desc:'日本设计中"侘寂"美学、原研哉的设计哲学与无印良品的品牌设计。'},
+  {id:25,subject:'色彩理论',topic:'品牌色彩策略',type:'知识点',difficulty:'重点',duration:'25min',tags:['品牌','策略','案例','VI'],desc:'通过Nike、Coca-Cola等案例学习品牌色彩战略的制定方法。'},
+  {id:26,subject:'设计系统',topic:'图标系统设计规范',type:'知识点',difficulty:'适中',duration:'20min',tags:['图标','栅格','风格','一致性'],desc:'图标设计的基本原则、尺寸规范、栅格系统和风格一致性要求。'},
+  {id:27,subject:'英语',topic:'四级阅读理解技巧',type:'练习题',difficulty:'重点',duration:'35min',tags:['阅读','技巧','真题','推理'],desc:'阅读理解核心技巧：主旨题、细节题、推断题的解题方法与8道模拟题。'}
+];
+
+// ===== 小星决策规则 =====
+var decisionRules={
+  weakThreshold:70,    // 正确率<70% 判定为薄弱
+  errorPriority:3,      // 错题≥3 提升优先级
+  minDailyMinutes:20    // 每科目最低日均学习时长
+};
+
+// ===== AI LOCAL =====
+var aiMessages=[];
+
+// ===== 聊天记录持久化 =====
+function saveChatHistory(){localStorage.setItem('xz_chat_history',JSON.stringify(aiMessages));}
+function loadChatHistory(){
+  try{aiMessages=JSON.parse(localStorage.getItem('xz_chat_history')||'[]');}catch(e){aiMessages=[];}
+  var body=document.getElementById('chat-body');if(!body)return;
+  var html='';
+  // 保留默认的欢迎消息
+  aiMessages.forEach(function(m){
+    if(m.role==='user')html+='<div class="chat-msg user"><div class="chat-avatar user-av">J</div><div class="chat-bubble">'+m.text.replace(/</g,'&lt;')+'</div></div>';
+    else html+='<div class="chat-msg ai"><div class="chat-avatar ai-av"><span class="material-symbols-outlined">auto_awesome</span></div><div class="chat-bubble">'+m.text.replace(/\n/g,'<br>')+'</div></div>';
+  });
+  if(html)body.innerHTML=html;
+  else body.innerHTML='<div class="chat-msg ai"><div class="chat-avatar ai-av"><span class="material-symbols-outlined">auto_awesome</span></div><div class="chat-bubble">你好呀！我是小星 ✨ 你的 AI 学习伙伴。我可以帮你推荐学习内容、整理笔记、制定学习计划。有什么想了解的，尽管问我吧！</div></div>';
+}
+
+// ===== CHAT =====
+function openChat(){
+  document.getElementById('chat-overlay').classList.add('open');
+  if(aiMessages.length===0)loadChatHistory();
+}
+function closeChat(){document.getElementById('chat-overlay').classList.remove('open');}
+function sendMessage(){
+  var inp=document.getElementById('chat-input');
+  var txt=inp.value.trim();if(!txt)return;
+  addUserMsg(txt);inp.value='';inp.style.height='auto';
+  toggleSendBtn();
+  document.getElementById('chat-add-menu').classList.remove('show');
+  var body=document.getElementById('chat-body');
+  var typingEl=document.createElement('div');typingEl.id='typing-ind';typingEl.className='chat-msg ai';
+  typingEl.innerHTML='<div class="chat-avatar ai-av"><span class="material-symbols-outlined">auto_awesome</span></div><div class="chat-bubble"><div class="chat-typing"><span></span><span></span><span></span></div></div>';
+  body.appendChild(typingEl);body.scrollTop=body.scrollHeight;
+  aiMessages.push({role:'user',text:txt});saveChatHistory();
+  var delay=600+Math.random()*1200;
+  setTimeout(function(){
+    removeTyping();
+    var reply=generateAiReply(txt,aiMessages);
+    aiMessages.push({role:'ai',text:reply});saveChatHistory();
+    addAiMsg(reply);
+  },delay);
+}
+function removeTyping(){var el=document.getElementById('typing-ind');if(el)el.remove();}
+function addUserMsg(text){
+  var body=document.getElementById('chat-body');
+  body.innerHTML+='<div class="chat-msg user"><div class="chat-avatar user-av">J</div><div class="chat-bubble">'+text.replace(/</g,'&lt;')+'</div></div>';
+  body.scrollTop=body.scrollHeight;
+}
+function addAiMsg(text){
+  var body=document.getElementById('chat-body');
+  var html='<div class="chat-msg ai"><div class="chat-avatar ai-av"><span class="material-symbols-outlined">auto_awesome</span></div><div class="chat-bubble">'+text.replace(/\n/g,'<br>')+'</div></div>';
+  body.innerHTML+=html;
+  body.scrollTop=body.scrollHeight;
+  // 渲染收藏按钮（如果有推荐内容）
+  renderSuggestButtons(body);
+}
+// 解析小星回复中的推荐内容，生成收藏按钮
+function renderSuggestButtons(container){
+  var items=contentLibrary.slice();
+  var lastBubble=container.querySelector('.chat-msg:last-child .chat-bubble');
+  if(!lastBubble)return;
+  var bubbleText=lastBubble.textContent||'';
+  // 从回复文本中匹配 contentLibrary 的内容
+  var matched=[];
+  items.forEach(function(c){
+    // 检查回复中是否提到了这个话题
+    var keywords=c.topic.split(/[()（）\s]+/).filter(function(k){return k.length>1;});
+    var score=0;
+    keywords.forEach(function(kw){if(bubbleText.indexOf(kw)>=0)score+=2;});
+    if(score>=2)matched.push(c);
+  });
+  if(matched.length===0)return;
+  // 添加收藏卡片
+  var cardHtml='<div class="chat-msg ai" style="margin-top:4px;"><div class="chat-avatar ai-av" style="visibility:hidden;"><span class="material-symbols-outlined">auto_awesome</span></div><div style="background:var(--card);border-radius:var(--r-md);padding:12px;box-shadow:var(--shadow-sm);flex:1;max-width:85%;">';
+  cardHtml+='<div style="font-size:12px;color:var(--text3);margin-bottom:8px;">📋 推荐收藏到知识库</div>';
+  matched.slice(0,3).forEach(function(c){
+    var uid='kb_'+c.id+'_'+Date.now()+'_'+Math.floor(Math.random()*1000);
+    cardHtml+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--border);">';
+    cardHtml+='<div><div style="font-size:13px;color:var(--text1);font-weight:500;">'+c.topic+'</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">'+c.tags.join(' · ')+'</div></div>';
+    cardHtml+='<button class="btn btn-sm" style="background:var(--primary-bg);color:var(--primary);font-size:12px;flex-shrink:0;" onclick="collectFromChat('+c.id+',this);event.stopPropagation();">收藏</button>';
+    cardHtml+='</div>';
+  });
+  cardHtml+='</div></div>';
+  container.innerHTML+=cardHtml;
+  container.scrollTop=container.scrollHeight;
+}
+function collectFromChat(contentId,btnEl){
+  var item=contentLibrary.find(function(c){return c.id===contentId;});
+  if(!item){showToast('内容未找到');return;}
+  collectToKB(item);
+  btnEl.textContent='已收藏';btnEl.style.background='var(--green-bg)';btnEl.style.color='var(--green)';btnEl.disabled=true;btnEl.style.cursor='default';
+  showToast('已收藏「'+item.topic+'」到知识库');
+}
+function generateAiReply(input,history){
+  var l=input.toLowerCase();
+  var i;
+  // 问候
+  if(/^(你好|hi|hello|嗨|hey|哈喽|在吗)/.test(l)) return pickRandom([
+    '你好呀！我是小星 ✨ 今天想学点什么呢？可以问我学习相关的问题哦~',
+    '嗨～欢迎回来！今天已经完成了2个任务，很棒！继续加油 💪',
+    '你好！有什么我可以帮你的吗？制定计划、解答问题、推荐内容都可以找我哦 😊',
+    '在的在的！今天想学什么？我看你在设计方面进步很快呢 🎨'
+  ]);
+  // 设计/UI/UX
+  if(/设计|ui|ux|figma|原型|界面|交互|排版|色彩|字体|布局|组件/.test(l)) return pickRandom([
+    '关于设计，我建议从「设计系统基础」开始 🎯\n\n核心是掌握四要素：设计原则、组件库、设计规范、图标系统。其中一致性原则贯穿始终，是最重要的基础。\n\n要不要我把相关内容加入你的学习任务？',
+    '你最近在学 UI 设计，做得不错！我注意到你在上次测试中「交互设计原则」正确率只有60%，建议重点复习一下 📋',
+    '设计方面的学习路线建议：\n1️⃣ 设计系统基础（已开始✓）\n2️⃣ 交互设计原则（待加强⚠️）\n3️⃣ Figma 实操进阶\n4️⃣ 设计规范与组件化\n\n按这个顺序循序渐进效果最好 💡'
+  ]);
+  // Python/编程
+  if(/python|编程|代码|程序|循环|函数|变量|数据结构|算法|javascript|js|html|css/.test(l)) return pickRandom([
+    '学习编程建议先夯实基础！你目前 Python 循环语句正确率92%，掌握得不错 💪\n\n下一步建议：函数与模块 → 数据结构 → 小项目实战\n\n需要我帮你生成练习题吗？',
+    '编程学习最重要的是多动手练习。你现在的基础语法已经不错了，建议开始做小项目来巩固，比如做一个待办清单或简单的计算器 🛠️',
+    '关于编程，记住三件事：\n1️⃣ 先理解逻辑，再写代码\n2️⃣ 报错不要慌，学会看错误信息\n3️⃣ 多看别人的代码，学习好的写法\n\n你的「Python循环语句」任务完成得很好，继续保持！✨'
+  ]);
+  // 英语/四级/单词
+  if(/英语|四级|单词|词汇|英语|cet|雅思|托福|背单词|英语/.test(l)) return pickRandom([
+    '英语四级备考建议：\n📚 每天50个高频词汇 + 例句记忆\n🎧 听力每天30分钟，重点练真题\n✍️ 写作背5篇模板，灵活套用\n\n我把「英语四级高频词汇500」加入你的任务？',
+    '四级高频词汇板块已经准备好了！建议每天利用碎片时间背单词，配合做题巩固效果更好 📖',
+    '英语学习贵在坚持！我建议你制定一个每日计划：早上背单词20分钟 → 中午做阅读1篇 → 晚上复习错题。要我帮你排个学习计划吗？📅'
+  ]);
+  // 学习计划/规划
+  if(/计划|规划|安排|目标|怎么学|学习路线|方向|建议/.test(l)) return pickRandom([
+    '根据你目前的学习情况，我建议这样安排：\n\n📅 今天：复习设计系统基础（你的薄弱点）\n📅 明天：交互设计原则专项练习\n📅 后天：Python 函数与模块\n📅 本周目标：完成4个任务，正确率90%+\n\n需要我帮你加入任务列表吗？✅',
+    '你的学习数据分析来看：\n✅ 设计基础：掌握良好\n⚠️ 交互原则：需要加强\n✅ Python循环：优秀\n✅ 英语词汇：进行中\n\n建议本周重点放在交互设计原则上，同时保持每天背单词的习惯。加油！💪',
+    '好的，我来帮你规划！你是哪个方向想重点提升？\n\n🎨 设计：设计系统 → 交互原则 → Figma实战\n💻 编程：基础语法 → 数据结构 → 项目实战\n📚 英语：词汇 → 听力 → 写作\n\n告诉我你的优先级，我来排计划！'
+  ]);
+  // 复习/测试/错题
+  if(/复习|测试|做题|练习|错题|考试|quiz/.test(l)) return pickRandom([
+    '复习建议用「间隔重复法」：\n1️⃣ 学完当天复习一次\n2️⃣ 3天后第二次复习\n3️⃣ 7天后第三次复习\n4️⃣ 15天后最终巩固\n\n这样可以把知识长期记住！要我帮你安排复习计划吗？🧠',
+    '好的！我帮你生成一套练习题 📝\n\n根据你的学习进度，建议从「设计系统基础」开始，10道题约30分钟。准备好了告诉我！',
+    '做题是巩固知识最好的方式！你目前在设计方面错题主要集中在「间距系统」和「颜色体系」，建议针对性练习这部分 🎯'
+  ]);
+  // 感谢/夸奖
+  if(/谢谢|感谢|棒|厉害|优秀|不错|好的|可以/.test(l)) return pickRandom([
+    '不客气！学习路上我一直在 😊 有问题随时找我~',
+    '谢谢夸奖！我们一起加油！你最近的学习状态很好，继续保持 ⭐',
+    '这是我应该做的～记住，每天进步一点点，就是最好的节奏 ✨'
+  ]);
+  // 自我介绍/你是什么/你是谁
+  if(/你是谁|你是什么|介绍|你能做什么|功能/.test(l)) return pickRandom([
+    '我是小星 ✨ 你的 AI 学习伙伴！我可以：\n\n📖 推荐学习内容\n📝 制定学习计划\n💡 解答学习问题\n📊 分析学习进度\n🎯 生成练习题\n\n有什么需要尽管问我！',
+    '我叫小星，是星知App里的AI学习助手 🌟 我专注于帮助你高效学习，会根据你的学习数据和薄弱环节给出个性化建议。简单说，我是你的24小时学习搭子！'
+  ]);
+  // 闲聊/情绪
+  if(/累|烦|不想学|困|压力大|焦虑|难|学不会|放弃/.test(l)) return pickRandom([
+    '累了就休息一下，学习是马拉松不是冲刺 🌙\n\n适当休息反而效率更高。你可以：\n• 散步10分钟放松大脑\n• 听首喜欢的歌\n• 做做拉伸运动\n\n休息好了再继续，我在这里等你！',
+    '我理解你的感受，每个人都会有这样的时刻 💛\n\n建议把大目标拆成小任务，每次只专注一个，完成后给自己一个小奖励。你已经连续学习7天了，这说明你很有毅力！',
+    '别给自己太大压力！你想想，你已经完成了28个任务，累计学习42小时，这些成绩都很了不起 🏆\n\n今天学不进去也没关系，明天重新出发就好～'
+  ]);
+  // 时间/天气/日常
+  if(/几点|时间|天气|今天|周末|假期/.test(l)) return pickRandom([
+    '现在是学习的好时候！今天还有2个任务等你完成哦，完成后可以好好休息 📚',
+    '周末也是学习的好时光！不过劳逸结合很重要，建议半天学习半天放松 😊',
+    '不管什么时候，学一点就是赚到一点！今天想从哪个任务开始？'
+  ]);
+  // 默认回复
+  return pickRandom([
+    '收到！我理解你的问题了 💭\n\n这个话题很有意思，建议你可以从相关的基础知识开始学习。要不要我帮你查找相关的学习资料？',
+    '嗯嗯，这个我可以帮你！让我想想...\n\n建议你在知识库里搜索一下相关内容，或者我可以直接给你推荐一些学习资源 📚',
+    '好问题！✨ 我建议你把这个加入学习计划中，系统性地掌握会更好。需要我帮你安排吗？',
+    '我记下你的需求了 📝 你可以继续问我关于学习计划、课程推荐、做题练习等方面的问题，我随时在线！'
+  ]);
+}
+function pickRandom(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function aiReply(input){
+  var l=input.toLowerCase();
+  if(l.indexOf('设计')>=0||l.indexOf('ui')>=0||l.indexOf('ux')>=0)return '关于设计，建议从「设计系统基础」开始。核心是设计原则、组件库和设计规范，掌握一致性原则最重要 🎯';
+  if(l.indexOf('python')>=0||l.indexOf('编程')>=0)return '学习Python建议先掌握基础语法，重点练习循环和函数。推荐从「Python循环语句」开始配合练习 💪';
+  if(l.indexOf('英语')>=0||l.indexOf('四级')>=0)return '英语四级建议每天背50个高频词汇配合例句记忆，需要我把词汇表加入你的任务吗？📚';
+  if(l.indexOf('计划')>=0||l.indexOf('规划')>=0)return '建议：\n1️⃣ 今天：复习设计系统基础\n2️⃣ 明天：交互设计原则\n3️⃣ 后天：Python循环练习\n\n需要加入任务吗？';
+  if(l.indexOf('你好')>=0||l.indexOf('hi')>=0)return '你好呀！今天完成了2个任务，做得很棒！还有什么可以帮你的？ ✨';
+  return '收到！你可以问我学习相关的问题，比如"帮我制定学习计划"或"推荐设计相关内容" 😊';
+}
+function toggleAddMenu(){document.getElementById('chat-add-menu').classList.toggle('show');}
+function handleAddItem(type){
+  document.getElementById('chat-add-menu').classList.remove('show');
+  var labels={camera:'拍照',photo:'照片',file:'文件',link:'链接'};
+  addUserMsg('[上传'+labels[type]+']');
+  setTimeout(function(){addAiMsg('收到！让我帮你处理这个'+labels[type]+'内容，稍等片刻... ✨');},800);
+}
+function autoGrow(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+function toggleSendBtn(){
+  var inp=document.getElementById('chat-input');var btn=document.getElementById('mic-btn');
+  if(!inp||!btn)return;
+  var hasText=inp.value.trim().length>0;
+  var icon=btn.querySelector('.material-symbols-outlined');
+  if(hasText){icon.textContent='send';btn.style.background='#3B82F6';}
+  else{icon.textContent='mic';btn.style.background='';btn.classList.remove('recording');}
+}
+function handleMicOrSend(){
+  var inp=document.getElementById('chat-input');
+  if(inp&&inp.value.trim().length>0){sendMessage();}
+  else{toggleAddMenu();}
+}
+
+// ===== TASKS =====
+function renderTaskCard(t,source){
+  source=source||'today';
+  var barClass=t.status==='done'?'green':t.status==='doing'?'orange':'red';
+  var badgeClass=t.status==='done'?'badge-green':t.status==='doing'?'badge-orange':'badge-red';
+  var statusText=t.status==='done'?'已完成':t.status==='doing'?'进行中':'未完成';
+  var actionBtn='';
+  if(t.status==='todo')actionBtn='<button class="btn btn-gradient btn-sm" onclick="event.stopPropagation();startTask('+t.id+')">开始学习</button>';
+  else if(t.status==='doing')actionBtn='<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();showScreen(\'screen-learn\',\'slide-in\')">继续</button>';
+  else actionBtn='<button class="btn btn-sm" style="background:var(--green-bg);color:var(--green);" onclick="event.stopPropagation();showModal(\'modal-review\')">查看复盘</button>';
+  var meta=t.status==='done'?t.time+' · 正确率'+t.accuracy:t.status==='doing'?'进度 '+t.progress+'%':t.duration+' · '+t.diff;
+  return '<div class="task-card" onclick="openTaskDetail('+t.id+',\''+source+'\')"><div class="task-card-bar '+barClass+'"></div><div class="task-info"><div class="task-name">'+t.name+'</div><div class="task-meta"><span class="badge '+badgeClass+'">'+statusText+'</span>'+meta+'</div></div><div class="task-action">'+actionBtn+'</div></div>';
+}
+function renderTasks(){
+  var hasFilter=taskFilter.diff.length>0||taskFilter.dur.length>0;
+  function matchFilter(t){
+    if(!hasFilter)return true;
+    // Match difficulty
+    if(taskFilter.diff.length>0&&!taskFilter.diff.some(function(d){return t.diff&&t.diff.indexOf(d)>=0;}))return false;
+    // Match duration (extract number from string like "30分钟")
+    if(taskFilter.dur.length>0){
+      var durNum=parseInt(t.duration)||0;
+      var matchDur=false;
+      taskFilter.dur.forEach(function(d){
+        var dv=parseInt(d);if(!isNaN(dv)&&durNum===dv)matchDur=true;
+      });
+      if(!matchDur)return false;
+    }
+    return true;
+  }
+  var todayHtml='',doneCount=0;
+  todayTasks.forEach(function(t){if(matchFilter(t)){todayHtml+=renderTaskCard(t);}if(t.status==='done')doneCount++;});
+  document.getElementById('today-task-list').innerHTML=todayHtml;
+  var filteredCount=todayTasks.filter(matchFilter).length;
+  document.getElementById('today-count').textContent=doneCount+'/'+(hasFilter?filteredCount:todayTasks.length);
+
+  var yesterdayHtml='';
+  yesterdayTasks.forEach(function(t){if(matchFilter(t)){yesterdayHtml+=renderTaskCard(t,'yesterday');}});
+  document.getElementById('yesterday-task-list').innerHTML=yesterdayHtml;
+  document.getElementById('yesterday-count').textContent=yesterdayTasks.filter(function(t){return t.status==='done'&&matchFilter(t);}).length+'/'+(hasFilter?yesterdayTasks.filter(matchFilter).length:yesterdayTasks.length);
+
+  var earlierHtml='';
+  earlierTasks.forEach(function(t){
+    if(!matchFilter(t))return;
+    var barClass=t.status==='done'?'green':t.status==='doing'?'orange':'red';
+    var badgeClass=t.status==='done'?'badge-green':t.status==='doing'?'badge-orange':'badge-red';
+    var statusText=t.status==='done'?'已完成':t.status==='doing'?'进行中':'未完成';
+    var meta=t.time+' · 正确率'+t.accuracy;
+    earlierHtml+='<div class="task-card" onclick="openTaskDetail('+t.id+',\'earlier\')"><div class="task-card-bar '+barClass+'"></div><div class="task-info"><div class="task-name">'+t.name+'</div><div class="task-meta"><span class="badge '+badgeClass+'">'+statusText+'</span>'+meta+' · '+t.date+'</div></div><div class="task-action"><button class="btn btn-sm" style="background:var(--green-bg);color:var(--green);" onclick="event.stopPropagation();showModal(\'modal-review\')">查看复盘</button></div></div>';
+  });
+  document.getElementById('earlier-task-list').innerHTML=earlierHtml;
+}
+function openTaskDetail(id,source){
+  var list=source==='yesterday'?yesterdayTasks:source==='earlier'?earlierTasks:todayTasks;
+  var t=list.find(function(x){return x.id===id;});
+  if(!t)return;
+  currentTask=t;
+  if(navHistory[navHistory.length-1]!=='screen-tasks')navHistory.push('screen-tasks');
+  renderLearnScreen();
+  showScreen('screen-learn','slide-in');
+}
+function findContentForTask(name){
+  var best=null,bestScore=0;
+  var words=name.replace(/[A-Za-z]+/g,'').split('').filter(function(c){return c.trim();}).join('');
+  if(!words)words=name;
+  contentLibrary.forEach(function(c){
+    var score=0;
+    var kwArr=name.split(/[\s()（）]+/).filter(function(k){return k.length>1;});
+    kwArr.forEach(function(kw){if(c.topic.indexOf(kw)>=0)score+=3;if(c.desc.indexOf(kw)>=0)score+=1;if(c.subject.indexOf(kw)>=0)score+=1;c.tags.forEach(function(tag){if(tag.indexOf(kw)>=0)score+=1;});});
+    if(score>bestScore){bestScore=score;best=c;}
+  });
+  return best&&bestScore>0?best:null;
+}
+function renderLearnScreen(){
+  if(!currentTask)return;
+  var titleEl=document.getElementById('learn-title');if(titleEl)titleEl.textContent=currentTask.name;
+  // 确保资料 tab 亮着
+  var tabs=document.querySelectorAll('#screen-learn .learn-tab');
+  tabs.forEach(function(t,i){t.classList.toggle('active',i===0);});
+  renderLearnContent();
+  loadQuizForTask();
+}
+function startTask(id){
+  var t=todayTasks.find(function(x){return x.id===id;});
+  if(t){t.status='doing';t.progress=0;renderTasks();saveTodayTasks();}
+  currentTask=t;renderLearnScreen();
+  if(navHistory[navHistory.length-1]!=='screen-tasks')navHistory.push('screen-tasks');
+  showScreen('screen-learn','slide-in');
+}
+function markTaskDone(){
+  var t=todayTasks.find(function(x){return x.status==='doing';});
+  if(!t)return;
+  var minutes=Math.floor(Math.random()*20)+15;
+  var acc=Math.floor(Math.random()*30)+65;
+  t.status='done';t.time=minutes+'分钟';t.accuracy=acc+'%';
+  var log=ensureTodayLog();
+  log.completedCount++;log.totalAccuracy+=acc;log.totalTime+=minutes;
+  if(!log.taskNames)log.taskNames=[];
+  var mappedSubject='其他';
+  for(var key in subjectMap){if(t.name.indexOf(key)>=0){mappedSubject=subjectMap[key];break;}}
+  log.taskNames.push({name:t.name,subject:mappedSubject,time:minutes,accuracy:acc});
+  if(!log.subjects[mappedSubject])log.subjects[mappedSubject]={time:0,accuracy:0,questions:0};
+  log.subjects[mappedSubject].time+=minutes;log.subjects[mappedSubject].accuracy=Math.round((log.subjects[mappedSubject].accuracy*(log.subjects[mappedSubject].questions||0)+acc)/(log.subjects[mappedSubject].questions+1));
+  log.subjects[mappedSubject].questions++;
+  learnData.lastActiveDate=today;
+  saveTodayTasks();
+  saveLearnData();renderTasks();updateHomeStreak();updateTodayStats();renderHomeReview();renderLearningStatus();
+  renderTaskReport();showModal('modal-review');
+}
+
+// ===== KNOWLEDGE =====
+function renderKB(){
+  var items=[];try{items=JSON.parse(localStorage.getItem("xz_collected_kb")||"[]");}catch(e){}
+  var diffSel=[],typeSel=[];
+  document.querySelectorAll("#kb-filter-diff .filter-chip.active").forEach(function(el){var v=el.getAttribute("data-val");if(v)diffSel.push(v);});
+  document.querySelectorAll("#kb-filter-type .filter-chip.active").forEach(function(el){var v=el.getAttribute("data-val");if(v)typeSel.push(v);});
+  var filtered=items.filter(function(k){
+    var dMatch=diffSel.length===0||diffSel.indexOf(k.difficulty)>=0;
+    var tMatch=typeSel.length===0||typeSel.indexOf(k.type)>=0;
+    return dMatch&&tMatch;
+  });
+  var html="";
+  var tagCls={};
+  tagCls["\u91CD\u70B9"]="badge-green";tagCls["\u4E2D\u7B49"]="badge-orange";tagCls["\u9002\u4E2D"]="badge-orange";tagCls["\u7B80\u5355"]="badge-blue";
+  tagCls["\u77E5\u8BC6\u70B9"]="badge-purple";tagCls["\u89C6\u9891"]="badge-purple";tagCls["\u6587\u7AE0"]="badge-purple";
+  var subjectIcons={"\u8BBE\u8BA1\u53F2":"\uD83C\uDFA8","\u8272\u5F69\u7406\u8BBA":"\uD83C\uDFA8","\u8BBE\u8BA1\u7CFB\u7EDF":"\uD83C\uDFA8","\u7F16\u7A0B":"\uD83D\uDCBB","\u82F1\u8BED":"\uD83D\uDCDA"};
+  if(filtered.length===0){html='<div style="text-align:center;padding:60px 20px;color:var(--text3);"><span class="material-symbols-outlined" style="font-size:48px;display:block;margin-bottom:12px;">library_books</span>\u77E5\u8BC6\u5E93\u8FD8\u662F\u7A7A\u7684<br><span style="font-size:13px;">\u901A\u8FC7\u5C0F\u661F\u5EFA\u8BAE\u6216\u6628\u65E5\u590D\u76D8\u6536\u85CF\u5185\u5BB9\u5427</span></div>';}
+  else{filtered.forEach(function(k){
+    var tagsHtml="<span class=\"badge "+(tagCls[k.difficulty]||"badge-blue")+"\">"+k.difficulty+"</span>"+"<span class=\"badge "+(tagCls[k.type]||"badge-purple")+"\">"+k.type+"</span>";
+    var icon=subjectIcons[k.subject]||"\uD83D\uDCDA";
+    html+='<div class="kb-card" onclick="navTo(\'screen-kd\',\'screen-kb\')"><div class="kb-card-title">'+icon+" "+k.topic+'</div><div class="kb-card-desc">'+k.desc+'</div><div class="kb-card-tags">'+tagsHtml+'</div></div>';
+  });}
+  document.getElementById("kb-list").innerHTML=html;
+}
+
+function resetKbFilter(){
+  document.querySelectorAll("#kb-filter-diff .filter-chip,#kb-filter-type .filter-chip").forEach(function(el){el.classList.remove("active");});
+  document.querySelector("#kb-filter-diff .filter-chip")&&document.querySelector("#kb-filter-diff .filter-chip").classList.add("active");
+  document.querySelector("#kb-filter-type .filter-chip")&&document.querySelector("#kb-filter-type .filter-chip").classList.add("active");
+  renderKB();toggleKbFilter();
+}
+
+function applyKbFilter(){renderKB();toggleKbFilter();}
+// ===== MODALS =====
+function showModal(id){document.getElementById(id).classList.add('show');}
+function hideModal(id){document.getElementById(id).classList.remove('show');}
+
+// ===== FILTER =====
+var taskFilter={diff:[],dur:[]};
+function toggleFilter(){document.getElementById('filter-panel').classList.toggle('show');}
+function toggleKbFilter(){document.getElementById('kb-filter-panel').classList.toggle('show');}
+function selectChip(el){el.classList.toggle('active');}
+function selectFilterChip(el){
+  el.classList.toggle('active');
+}
+function applyFilter(){
+  // Read selected chips
+  taskFilter.diff=[];
+  taskFilter.dur=[];
+  document.querySelectorAll('#filter-diff .filter-chip.active').forEach(function(c){
+    taskFilter.diff.push(c.getAttribute('data-val'));
+  });
+  document.querySelectorAll('#filter-dur .filter-chip.active').forEach(function(c){
+    taskFilter.dur.push(c.getAttribute('data-val'));
+  });
+  toggleFilter();
+  renderTasks();
+  showToast('筛选已应用');
+}
+function resetFilter(){
+  taskFilter={diff:[],dur:[]};
+  document.querySelectorAll('#filter-diff .filter-chip').forEach(function(c){c.classList.remove('active');});
+  document.querySelectorAll('#filter-dur .filter-chip').forEach(function(c){c.classList.remove('active');});
+  toggleFilter();
+  renderTasks();
+}
+
+// ===== LEARN TABS =====
+function backToLearnDetail(){
+  // 从做题页返回，切回资料 tab 并显示资料内容
+  navHistory.pop();if(navHistory.length<1)navHistory=['screen-home'];
+  showScreen('screen-learn',null,true);
+  var tabs=document.querySelectorAll('#screen-learn .learn-tab');
+  tabs.forEach(function(t,i){t.classList.toggle('active',i===0);});
+  renderLearnContent();
+}
+function switchLearnTab(el,idx){
+  el.parentElement.querySelectorAll('.learn-tab').forEach(function(t){t.classList.remove('active');});
+  el.classList.add('active');
+  var area=document.getElementById('learn-content-area');if(!area)return;
+  if(idx===1){
+    // 视频页
+    area.innerHTML='<div style="text-align:center;padding:80px 20px;color:var(--text3);"><span class="material-symbols-outlined" style="font-size:56px;display:block;margin-bottom:12px;color:var(--border);">videocam_off</span><div style="font-size:15px;font-weight:500;">暂无视频内容</div><div style="font-size:13px;margin-top:4px;">视频功能即将上线</div></div>';
+  }else if(idx===2){
+    // 笔记页 - 备忘录风格
+    var saved=localStorage.getItem('xz_note_'+(currentTask?currentTask.id:''))||'';
+    area.innerHTML='<div style="padding:4px 0;"><textarea id="task-note-area" placeholder="在这里记录你的学习笔记..." style="width:100%;min-height:280px;border:none;outline:none;font-size:14px;line-height:1.8;color:var(--text2);background:transparent;font-family:inherit;resize:none;-webkit-appearance:none;">'+saved+'</textarea></div>';
+    var ta=document.getElementById('task-note-area');
+    if(ta){ta.style.height='auto';ta.style.height=Math.max(280,ta.scrollHeight)+'px';ta.focus();
+      ta.addEventListener('input',function(){this.style.height='auto';this.style.height=Math.max(280,this.scrollHeight)+'px';localStorage.setItem('xz_note_'+(currentTask?currentTask.id:''),this.value);});}
+  }else if(idx===0){
+    // 资料页 - 重新渲染
+    renderLearnContent();
+  }
+}
+function renderLearnContent(){
+  if(!currentTask)return;
+  var area=document.getElementById('learn-content-area');if(!area)return;
+  var content=findContentForTask(currentTask.name);
+  var html='';
+  if(content){
+    html+='<div class="learn-section"><div class="learn-section-title"><span class="material-symbols-outlined">article</span>'+content.topic+'</div>';
+    html+='<div style="font-size:14px;color:var(--text2);line-height:1.8;"><p>'+content.desc+'</p>';
+    html+='<br><p><strong style="color:var(--text1);">相关标签：</strong></p><p>'+content.tags.join(' / ')+'</p>';
+    html+='<br><p><strong style="color:var(--text1);">难度：</strong>'+content.difficulty+'</p>';
+    html+='<br><p><strong style="color:var(--text1);">建议时长：</strong>'+content.duration+'</p></div></div>';
+    html+='<div class="learn-section"><div class="learn-section-title"><span class="material-symbols-outlined">auto_awesome</span>小星总结</div><div class="review-ai-card" style="margin-bottom:0;"><div class="ai-name"><span class="material-symbols-outlined">auto_awesome</span>小星</div><p>本节主题「'+content.topic+'」，难度'+content.difficulty+'，建议学习时长'+content.duration+'。认真完成后进入做题环节检验掌握程度。</p></div></div>';
+  }else{
+    html+='<div class="learn-section"><div class="learn-section-title"><span class="material-symbols-outlined">article</span>'+currentTask.name+'</div>';
+    html+='<div style="font-size:14px;color:var(--text2);line-height:1.8;"><p>本节内容：'+currentTask.name+'，难度'+currentTask.diff+'，预计用时'+currentTask.duration+'。</p><br><p>请认真阅读材料后进入做题环节。</p></div></div>';
+  }
+  area.innerHTML=html;
+}
+
+// ===== QUIZ =====
+function renderQuiz(idx){
+  if(idx>=quizData.length){document.getElementById('quiz-container').innerHTML='<div style="text-align:center;padding:60px 20px;"><span class="material-symbols-outlined" style="font-size:48px;color:var(--green);display:block;margin-bottom:12px;">celebration</span><div style="font-size:18px;font-weight:700;">全部完成！</div><div style="font-size:14px;color:var(--text3);margin-top:8px;">答对了 '+quizData.length+' 道题中的 '+quizData.length+' 道</div></div>';document.getElementById('quiz-next').style.display='none';return;}
+  var q=quizData[idx];
+  var labels=['A','B','C','D'];
+  var html='<div class="quiz-question"><div class="quiz-q-text">'+q.q+'</div>';
+  q.opts.forEach(function(opt,i){
+    html+='<div class="quiz-option" onclick="selectOption(this,'+i+')"><span class="opt-label">'+labels[i]+'</span>'+opt+'</div>';
+  });
+  html+='</div>';
+  document.getElementById('quiz-container').innerHTML=html;
+  document.getElementById('quiz-current').textContent=idx+1;
+  document.getElementById('quiz-total').textContent=quizData.length;
+  document.getElementById('quiz-bar').style.width=((idx+1)/quizData.length*100)+'%';
+  selectedOpt=-1;quizDone=false;
+  document.getElementById('quiz-submit').style.display='block';
+  document.getElementById('quiz-next').style.display='none';
+}
+function selectOption(el,idx){
+  if(quizDone)return;
+  el.parentElement.querySelectorAll('.quiz-option').forEach(function(o){o.classList.remove('selected');});
+  el.classList.add('selected');selectedOpt=idx;
+}
+function submitQuiz(){
+  if(selectedOpt<0)return;quizDone=true;
+  var q=quizData[currentQuiz];
+  var opts=document.querySelectorAll('.quiz-option');
+  opts.forEach(function(o,i){
+    if(i===q.ans)o.classList.add('correct');
+    if(i===selectedOpt&&selectedOpt!==q.ans)o.classList.add('wrong');
+    o.style.pointerEvents='none';
+  });
+  document.getElementById('quiz-submit').style.display='none';
+  if(currentQuiz<quizData.length-1)document.getElementById('quiz-next').style.display='block';
+}
+function nextQuiz(){currentQuiz++;renderQuiz(currentQuiz);}
+
+// ===== REAL-TIME CLOCK =====
+function updateClock(){
+  var d=new Date();
+  var h=d.getHours(),m=d.getMinutes();
+  document.querySelectorAll('.status-bar .time').forEach(function(el){
+    el.textContent=(h<10?'0':'')+h+':'+(m<10?'0':'')+m;
+  });
+}
+updateClock();
+setInterval(updateClock,10000);
+
+// ===== SEND CODE =====
+var codeTimer=null;var currentCode='';
+function sendCode(btn){
+  if(codeTimer)return;
+  currentCode='';for(var i=0;i<6;i++)currentCode+=Math.floor(Math.random()*10);
+  showToast('验证码已发送：'+currentCode);
+  btn.disabled=true;btn.style.opacity='.5';btn.style.cursor='default';
+  var sec=60;btn.textContent=sec+'s 后重发';
+  codeTimer=setInterval(function(){
+    sec--;if(sec<=0){clearInterval(codeTimer);codeTimer=null;btn.disabled=false;btn.style.opacity='1';btn.style.cursor='pointer';btn.textContent='获取验证码';}
+    else btn.textContent=sec+'s 后重发';
+  },1000);
+}
+var toastTimer=null;
+function showToast(msg){
+  var old=document.getElementById('toast-el');if(old)old.remove();
+  var el=document.createElement('div');el.id='toast-el';
+  el.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;padding:10px 24px;border-radius:22px;font-size:14px;z-index:999;animation:msgIn .3s ease;max-width:80%;text-align:center;pointer-events:none;';
+  el.textContent=msg;document.getElementById('app').appendChild(el);
+  clearTimeout(toastTimer);toastTimer=setTimeout(function(){el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(function(){el.remove();},300);},2500);
+}
+
+// ===== INIT =====
+// ===== HOME DYNAMIC RENDERING =====
+function calcStreak(){
+  var today=getDateStr(),streak=0,d=new Date();
+  // 从今天开始往前找连续有记录的日子
+  for(var i=0;i<365;i++){
+    var ds=getDateStr(d);
+    var log=learnData.dailyLog[ds];
+    if(log&&log.completedCount>0){streak++;}
+    else if(i===0){
+      // 今天还没学过，不算断，看看昨天有没有
+      // continue checking
+    }else{
+      break;
+    }
+    d.setDate(d.getDate()-1);
+  }
+  return streak;
+}
+function updateHomeStreak(){
+  recomputeLearningState();
+  var streak=calcStreak();
+  learnData.streak=streak;
+  saveLearnData();
+  var el=document.getElementById('streak-days');
+  if(el)el.innerHTML=streak+'<span style="font-size:16px;font-weight:500;margin-left:2px">天</span>';
+  var pctEl=document.getElementById('streak-pct');
+  if(pctEl)pctEl.textContent='🔥 超过 100% 的用户';
+  var prev=getPrevAchiev(streak),next=getNextAchiev(streak);
+  var pct=streak>=next?100:Math.round((streak-prev)/(next-prev)*100);
+  var barEl=document.getElementById('streak-bar');
+  if(barEl)barEl.style.width=pct+'%';
+  var remainEl=document.getElementById('streak-remain');
+  if(remainEl)remainEl.textContent=streak>=next?'🎉 已达成成就！':'距下一个成就还需 '+(next-streak)+' 天';
+  // 同步"我的"页面的三个统计 + 统计页
+  var el2=document.getElementById('my-stat-time');if(el2)el2.textContent=fmtTime(learnData.totals.totalTime);
+  var el3=document.getElementById('my-stat-tasks');if(el3)el3.textContent=learnData.totals.totalDone;
+  var el4=document.getElementById('my-stat-streak');if(el4)el4.textContent=streak;
+  var el5=document.getElementById('stats-total-time');if(el5)el5.textContent=fmtTime(learnData.totals.totalTime);
+  var el6=document.getElementById('stats-total-tasks');if(el6)el6.textContent=learnData.totals.totalDone;
+  var el7=document.getElementById('stats-avg-acc');if(el7)el7.textContent=(learnData.totals.totalQ>0?Math.round(learnData.totals.totalAcc/learnData.totals.totalQ):0)+'%';
+  var el8=document.getElementById('stats-streak');if(el8)el8.textContent=streak+'天';
+  // 更新学习趋势
+  var el9=document.getElementById('ls-trend-week');if(el9){el9.textContent=learnData.trends.week;el9.className='ls-trend-item '+(learnData.trends.week.charAt(0)==='↑'?'ls-trend-up':'ls-trend-down');}
+  var el10=document.getElementById('ls-trend-month');if(el10){el10.textContent=learnData.trends.month;el10.className='ls-trend-item '+(learnState.trends.month.charAt(0)==='↑'?'ls-trend-up':'ls-trend-down');}
+}
+function updateTodayStats(){
+  var log=ensureTodayLog();
+  log.totalCount=todayTasks.length;saveLearnData();
+  var done=log.completedCount,total=log.totalCount;
+  var fillEl=document.getElementById('ht-complete-fill'),valEl=document.getElementById('ht-complete-val');
+  if(fillEl)fillEl.style.width=(total>0?done/total*100:0)+'%';
+  if(valEl)valEl.textContent=done+' / '+total;
+  var iconEl=document.getElementById('ht-task-icon');
+  if(iconEl)iconEl.style.color=done>=total&&total>0?'var(--green)':'rgba(255,255,255,.85)';
+  var acc=done>0?Math.round(log.totalAccuracy/done):0;
+  var timeEl=document.getElementById('ht-time-fill'),timeValEl=document.getElementById('ht-time-val');
+  if(timeEl)timeEl.style.width=Math.min(100,log.totalTime/75*100)+'%';
+  if(timeValEl)timeValEl.textContent=log.totalTime+'m / 75m';
+  var accEl=document.getElementById('ht-acc-fill'),accValEl=document.getElementById('ht-acc-val');
+  if(accEl)accEl.style.width=acc+'%';
+  if(accValEl)accValEl.textContent=(done>0?acc:'--')+' %';
+  var todayCountEl=document.getElementById('today-count');
+  if(todayCountEl)todayCountEl.textContent=done+'/'+total;
+}
+
+function renderHomeReview(){
+  var container=document.getElementById("home-review-content");if(!container)return;
+  var yd=getYesterdayStr();
+  var log=learnData.dailyLog[yd]||{completedCount:0,totalCount:0,totalAccuracy:0,totalTime:0,subjects:{},taskNames:[]};
+  var dp=yd.split("-");var dateStr=dp[0]+"年"+parseInt(dp[1])+"月"+parseInt(dp[2])+"日";
+  var accuracy=log.completedCount>0?Math.round(log.totalAccuracy/log.completedCount):0;
+
+  // ---- 学习时间分布：从 taskNames 取实际任务 ----
+  var taskDist=[];var maxT=1;
+  if(log.taskNames&&log.taskNames.length>0){
+    log.taskNames.forEach(function(tn){taskDist.push({name:tn.name,time:tn.time,accuracy:tn.accuracy});if(tn.time>maxT)maxT=tn.time;});
+  }
+  if(taskDist.length===0)taskDist=[{name:'暂无数据',time:0,accuracy:0}];
+  var sHtml="";
+  taskDist.forEach(function(t){var pct=maxT>0?Math.round(t.time/maxT*100):0;
+    sHtml+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="font-size:12px;color:var(--text2);width:110px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+t.name+'">'+t.name+'</span><div style="flex:1;height:16px;background:#F1F5F9;border-radius:8px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:var(--gradient);border-radius:8px;"></div></div><span style="font-size:12px;color:var(--primary);font-weight:600;width:38px;text-align:right;flex-shrink:0;">'+(t.time>0?t.time+"m":"0m")+'</span></div>';});
+
+  // ---- 近7日趋势：本周 周一→周日，今天不显示周几 ----
+  var dayNames=["周日","周一","周二","周三","周四","周五","周六"];
+  var todayDate=new Date();var todayDow=todayDate.getDay();
+  var mondayOffset=todayDow===0?-6:1-todayDow;
+  var tHtml="";
+  for(var i=0;i<7;i++){var d=new Date(todayDate);d.setDate(todayDate.getDate()+mondayOffset+i);
+    var ds=getDateStr(d);var dl=learnData.dailyLog[ds];
+    var mins=dl?dl.totalTime:0;var maxMin=80;var mP=Math.min(100,Math.max(3,Math.round(mins/maxMin*100)));
+    var isToday=(d.getDate()===todayDate.getDate()&&d.getMonth()===todayDate.getMonth());
+    var lb=isToday?"今天":dayNames[d.getDay()];
+    tHtml+='<div class="review-bar'+(isToday?' today':'')+'" style="height:'+mP+'%;"><div class="review-bar-val">'+(mins>0?mins:'0')+'m</div><div class="review-bar-label">'+lb+'</div></div>';}
+
+  // ---- 昨日亮点：从 taskNames 生成 ----
+  var hlHtml="";
+  if(log.completedCount===0){
+    hlHtml='<div class="review-highlight-item" style="padding:8px 0"><div class="review-highlight-icon" style="background:#F1F5F9;color:var(--text3);"><span class="material-symbols-outlined">info</span></div><div class="review-highlight-text" style="font-size:13px">昨日暂无学习记录，今天开始加油吧！</div></div>';
+  }else if(log.taskNames&&log.taskNames.length>0){
+    log.taskNames.forEach(function(tn){
+      var good=tn.accuracy>=85;
+      hlHtml+='<div class="review-highlight-item" style="padding:8px 0"><div class="review-highlight-icon '+(good?'good':'bad')+'"><span class="material-symbols-outlined">'+(good?'check':'priority_high')+'</span></div><div class="review-highlight-text" style="font-size:13px"><strong>'+tn.name+'</strong> 正确率 '+tn.accuracy+'%，用时 '+tn.time+'分钟</div></div>';
+    });
+  }else{
+    for(var s in log.subjects){var sub=log.subjects[s];
+      if(sub.accuracy>=90)hlHtml+='<div class="review-highlight-item" style="padding:8px 0"><div class="review-highlight-icon good"><span class="material-symbols-outlined">check</span></div><div class="review-highlight-text" style="font-size:13px"><strong>'+s+'</strong> 正确率 '+sub.accuracy+'%</div></div>';
+      else if(sub.accuracy<70&&sub.accuracy>0)hlHtml+='<div class="review-highlight-item" style="padding:8px 0"><div class="review-highlight-icon bad"><span class="material-symbols-outlined">priority_high</span></div><div class="review-highlight-text" style="font-size:13px"><strong>'+s+'</strong> 仅 '+sub.accuracy+'%，建议复习</div></div>';}
+    if(hlHtml==="")hlHtml='<div class="review-highlight-item" style="padding:8px 0"><div class="review-highlight-icon good"><span class="material-symbols-outlined">check</span></div><div class="review-highlight-text" style="font-size:13px">完成 '+log.completedCount+' 个任务，加油！</div></div>';
+  }
+
+  // ---- 小星昨日数据 ----
+  var adHtml=log.completedCount>0?
+    '<div class="ai-data-row"><span>完成任务</span><span class="val-good">'+log.completedCount+'/'+log.totalCount+'</span></div>'+
+    '<div class="ai-data-row"><span>学习时长</span><span>'+fmtTime(log.totalTime)+'</span></div>'+
+    '<div class="ai-data-row"><span>平均正确率</span><span>'+(accuracy>=70?'<span class="val-good">':'<span class="val-bad">')+accuracy+'%</span></div>'
+    :'<div class="ai-data-row"><span>学习状态</span><span style="color:var(--text3);">暂无记录</span></div>';
+
+  // ---- 小星判断：根据实际数据 ----
+  var ajHtml='';
+  if(log.completedCount===0){ajHtml='<div class="ai-judge-line">昨日暂无学习数据，建议今日开始学习</div>';}
+  else{
+    var weakS=[],strongS=[];
+    for(var s in log.subjects){if(log.subjects[s].accuracy<70&&log.subjects[s].accuracy>0)weakS.push(s);if(log.subjects[s].accuracy>=90)strongS.push(s);}
+    var jLines=[];
+    if(weakS.length>0){jLines.push(weakS.map(function(s){return '<strong class="val-bad">'+s+'</strong> 正确率 <strong class="val-bad">'+log.subjects[s].accuracy+'%</strong>';}).join('；'));jLines.push('判定为<strong>薄弱科目</strong>，建议优先复习');}
+    if(strongS.length>0){jLines.push(strongS.map(function(s){return '<strong class="val-good">'+s+'</strong> 掌握良好 <strong class="val-good">'+log.subjects[s].accuracy+'% ✅</strong>';}).join('；'));}
+    if(jLines.length===0)jLines.push(accuracy>=80?'整体表现不错，继续保持！':'正确率有提升空间，建议多加练习');
+    ajHtml=jLines.map(function(l){return '<div class="ai-judge-line">'+l+'</div>';}).join('');
+  }
+
+  // ---- 今日建议：昨日全优则随机推荐（第8点）----
+  var suggestHtml='';
+  if(log.completedCount===0){
+    suggestHtml=currentSuggestions.length>0?currentSuggestions.map(function(c){return '<div class="ai-suggest-line">→ '+c.topic+' ('+c.difficulty+')</div>';}).join(''):'<div class="ai-suggest-line" style="color:var(--text3);">暂无建议，试试生成任务</div>';
+  }else if(accuracy>=85&&weakS.length===0){
+    // 昨日表现优秀 → 随机推荐
+    var shuffled=shuffle(contentLibrary.slice()).slice(0,3);
+    suggestHtml=shuffled.map(function(c){return '<div class="ai-suggest-line">→ '+c.topic+' ('+c.difficulty+')</div>';}).join('');
+    suggestHtml+='<div class="ai-suggest-reason" style="margin-top:4px;">依据：昨日表现优秀 ('+accuracy+'%)，随机推荐新内容 🎉</div>';
+  }else{
+    suggestHtml=currentSuggestions.length>0?currentSuggestions.map(function(c){return '<div class="ai-suggest-line">→ '+c.topic+' ('+c.difficulty+')</div>';}).join(''):'<div class="ai-suggest-line" style="color:var(--text3);">暂无建议，试试生成任务</div>';
+  }
+
+  // ---- 汇总渲染 ----
+  var html="";
+  html+='<div class="home-review-header" style="cursor:pointer;" onclick="navTo(\'screen-review\',\'screen-home\')">';
+  html+='<div class="home-review-title"><span class="material-symbols-outlined">summarize</span>昨日复盘</div>';
+  html+='<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:13px;color:var(--text3);font-weight:500">'+dateStr+'</span><span class="material-symbols-outlined" style="font-size:18px;color:var(--text3);">chevron_right</span></div></div>';
+  // 统计：完成任务 → 学习时长 → 正确率（第3点顺序）
+  html+='<div class="review-main-stats" style="margin-bottom:16px"><div class="review-stat-item"><div class="val">'+log.completedCount+'/'+log.totalCount+'</div><div class="lbl">完成任务</div></div><div class="review-stat-item"><div class="val">'+fmtTime(log.totalTime)+'</div><div class="lbl">学习时长</div></div><div class="review-stat-item"><div class="val">'+accuracy+'%</div><div class="lbl">正确率</div></div></div>';
+  html+='<div class="review-section" style="margin:0 0 12px;padding:0"><div class="review-section-title" style="font-size:14px;margin-bottom:10px"><span class="material-symbols-outlined" style="color:var(--primary);font-size:16px;">show_chart</span>学习时间分布</div>'+sHtml+'</div>';
+  html+='<div class="review-section" style="margin:0 0 12px;padding:0"><div class="review-section-title" style="font-size:14px;margin-bottom:10px"><span class="material-symbols-outlined" style="color:var(--primary);font-size:16px;">bar_chart</span>近7日趋势</div><div class="review-chart" style="height:90px;padding:12px 8px;">'+tHtml+'</div></div>';
+  html+='<div class="review-section" style="margin:0 0 12px;padding:0"><div class="review-section-title" style="font-size:14px;margin-bottom:8px"><span class="material-symbols-outlined" style="color:var(--green);font-size:16px;">verified</span>昨日亮点</div><div class="review-highlights" style="padding:12px;">'+hlHtml+'</div></div>';
+  html+='<div class="review-ai-card" style="margin-bottom:0"><div class="ai-name"><span class="material-symbols-outlined">auto_awesome</span>小星</div>';
+  html+='<p class="ai-section-title">📊 昨日数据</p>'+adHtml;
+  html+='<div class="ai-judge"><div class="ai-judge-title"><span class="material-symbols-outlined">psychology</span>小星判断</div>'+ajHtml+'</div>';
+  html+='<p class="ai-section-title">📋 今日建议</p>'+suggestHtml;
+  html+='<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;"><button class="swap-batch-btn" onclick="generateAIDailyTasks()" style="background:var(--gradient);color:#fff;"><span class="material-symbols-outlined" style="font-size:14px;">auto_awesome</span>生成任务</button><button class="swap-batch-btn" onclick="toggleSwapPrefs()"><span class="material-symbols-outlined">refresh</span>换一批</button></div>';
+  html+='<div class="swap-prefs" id="swap-prefs"><div class="swap-pref-chip" onclick="selectSwapPref(this,\'补弱项\')">🎯 补弱项</div><div class="swap-pref-chip" onclick="selectSwapPref(this,\'提高难度\')">📈 提高难度</div><div class="swap-pref-chip" onclick="selectSwapPref(this,\'轻松一点\')">😌 轻松一点</div><div class="swap-pref-chip" onclick="selectSwapPref(this,\'换科目\')">📚 换科目</div></div></div>';
+  container.innerHTML=html;
+}
+function clearNotifyDot(){
+  var dot=document.getElementById('notify-dot');
+  if(dot)dot.style.display='none';
+}
+
+// ===== LEARNING STATUS RENDERING =====
+var currentLsTime=0;
+function renderLearningStatus(){
+  // Knowledge mastery
+  var khHtml='';
+  var subjects=learningState.knowledge;
+  for(var name in subjects){
+    var s=subjects[name];
+    var dotColor=s.mastery>=80?'var(--green)':s.mastery>=60?'var(--orange)':'var(--red)';
+    var barColor=s.mastery>=80?'var(--green)':s.mastery>=60?'var(--orange)':'var(--red)';
+    var isUp=s.trend.charAt(0)==='+';
+    var trendColor=isUp?'var(--green)':'var(--red)';
+    var arrow=isUp?'↑':'↓';
+    khHtml+='<div class="ls-subject-row" style="flex-wrap:wrap;">';
+    khHtml+='<div class="ls-dot" style="background:'+dotColor+'"></div>';
+    khHtml+='<span class="ls-name">'+name+'</span>';
+    khHtml+='<div class="ls-bar-wrap"><div class="ls-bar-fill" style="width:'+s.mastery+'%;background:'+barColor+'"></div></div>';
+    khHtml+='<div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;min-width:96px;">';
+    khHtml+='<div style="font-size:13px;font-weight:600;color:var(--text1);line-height:1.2;">'+s.prev+'% <span style="color:var(--text3);font-weight:400;font-size:11px;">→</span> '+s.mastery+'%</div>';
+    khHtml+='<div style="font-size:11px;color:'+trendColor+';font-weight:600;line-height:1.3;">'+arrow+' '+s.trend+'</div>';
+    khHtml+='<div style="font-size:10px;color:var(--text3);line-height:1.2;">'+s.reason+'</div>';
+    khHtml+='</div></div>';
+  }
+  var khEl=document.getElementById('ls-knowledge');
+  if(khEl)khEl.innerHTML=khHtml;
+
+  // Performance
+  renderLsPerformance();
+}
+
+function renderLsPerformance(){
+  var perfKeys=['today','week','total'];
+  var perfLabels=['今日','本周','累计'];
+  var perf=learningState.performance[perfKeys[currentLsTime]];
+  var html='<div class="ls-perf-item"><div class="ls-perf-val">'+perf.accuracy+'%</div><div class="ls-perf-label">正确率</div></div>';
+  html+='<div class="ls-perf-item"><div class="ls-perf-val">'+perf.completion+'</div><div class="ls-perf-label">任务完成率</div></div>';
+  html+='<div class="ls-perf-item"><div class="ls-perf-val" style="font-size:16px;">'+perf.time+'</div><div class="ls-perf-label">学习时长</div></div>';
+  html+='<div class="ls-perf-item"><div class="ls-perf-val" style="font-size:16px;">'+(currentLsTime===0?'88%':currentLsTime===1?'86%':'85%')+'</div><div class="ls-perf-label">平均掌握度</div></div>';
+  var el=document.getElementById('ls-perf');
+  if(el)el.innerHTML=html;
+}
+
+function switchLsTime(tabEl,idx){
+  currentLsTime=idx;
+  tabEl.parentElement.querySelectorAll('.ls-time-tab').forEach(function(t){t.classList.remove('active');});
+  tabEl.classList.add('active');
+  renderLsPerformance();
+}
+
+// ===== SWAP BATCH =====
+function toggleSwapPrefs(){
+  var el=document.getElementById('swap-prefs');
+  if(el)el.classList.toggle('show');
+}
+function selectSwapPref(chipEl,pref){
+  var el=document.getElementById('swap-prefs');
+  if(el)el.classList.remove('show');
+  currentSuggestionPref=pref;
+  updateSuggestions(pref);
+  showToast('已切换为「'+pref+'」推荐模式');
+}
+
+var currentSuggestions=[];
+var currentSuggestionPref='';
+
+function updateSuggestions(pref){
+  var items=[];
+  if(pref==='补弱项'){
+    var weakList=[];
+    for(var name in learningState.knowledge){var s=learningState.knowledge[name];if(s.mastery<decisionRules.weakThreshold)weakList.push({name:name,mastery:s.mastery});}
+    weakList.sort(function(a,b){return a.mastery-b.mastery;});
+    var subjMap={'设计系统':['设计史','设计系统','色彩理论'],'Python':'编程','英语词汇':'英语','英语':'英语'};
+    weakList.forEach(function(w){var ss=subjMap[w.name]||[w.name];var m=contentLibrary.filter(function(c){return ss.indexOf(c.subject)>=0;});shuffle(m).slice(0,2).forEach(function(c){items.push(c);});});
+  } else if(pref==='提高难度'){
+    items=contentLibrary.filter(function(c){return c.difficulty==='重点'||c.difficulty==='中等';});shuffle(items);items=items.slice(0,3);
+  } else if(pref==='轻松一点'){
+    items=contentLibrary.filter(function(c){return c.difficulty==='简单';});shuffle(items);items=items.slice(0,3);
+  } else if(pref==='换科目'){
+    var subjects=['设计史','色彩理论','编程','英语','设计系统'];shuffle(subjects);
+    subjects.forEach(function(subj){var m=contentLibrary.filter(function(c){return c.subject===subj;});if(m.length>0)items.push(shuffle(m)[0]);});items=items.slice(0,3);
+  }
+  if(items.length===0)items=contentLibrary.slice(0,3);
+  currentSuggestions=items;
+  renderHomeReview();
+}
+
+function generateAIDailyTasks(){
+  if(currentSuggestions.length===0)updateSuggestions('补弱项');
+  if(currentSuggestions.length===0)return;
+  currentSuggestions.forEach(function(c){
+    var dur=c.duration.replace('min','分钟');
+    if(!todayTasks.find(function(t){return t.name===c.topic;})){
+      todayTasks.push({id:200+Math.floor(Math.random()*1000),name:c.topic,duration:dur,diff:c.difficulty,status:'todo'});
+    }
+    collectToKB(c);
+  });
+  var log=ensureTodayLog();log.totalCount=todayTasks.length;saveLearnData();saveTodayTasks();
+  renderTasks();updateTodayStats();renderHomeReview();
+  showToast('已生成 '+currentSuggestions.length+' 个任务，内容已收藏到知识库');
+  setTimeout(function(){switchTab(1);},600);
+}
+
+function collectToKB(item){
+  try{var list=JSON.parse(localStorage.getItem("xz_collected_kb")||"[]");
+  if(!list.find(function(x){return x.id===item.id;})){
+    var entry={id:item.id,topic:item.topic,desc:item.desc,subject:item.subject||"",difficulty:item.difficulty||"\u9002\u4E2D",type:item.type||"\u77E5\u8BC6\u70B9"};
+    list.push(entry);localStorage.setItem("xz_collected_kb",JSON.stringify(list));
+    renderKB();
+  }}catch(e){}
+}
+
+function makeTaskFromLib(c){
+  return {id:200+Math.floor(Math.random()*1000),name:c.topic,duration:c.duration.replace('min','分钟'),diff:c.difficulty,status:'todo'};
+}
+
+function shuffle(arr){for(var i=arr.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var tmp=arr[i];arr[i]=arr[j];arr[j]=tmp;}return arr;}
+function initApp(){loadTodayTasks();seedYesterdayData();populateYesterdayFromLog();populateEarlierTasks();if(currentSuggestions.length===0)updateSuggestions('补弱项');renderTasks();renderKB();renderQuiz(0);renderLearningStatus();updateHomeStreak();updateTodayStats();renderHomeReview();}
+initApp();
+</script>
+</body>
+</html>
